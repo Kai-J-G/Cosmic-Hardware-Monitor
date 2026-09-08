@@ -1,4 +1,6 @@
-<img src="data/icons/temptyle.png" alt="TempTyle" width="128">
+<div align="center">
+
+<img src="data/icons/logo.png" alt="Cosmic Hardware Monitor" width="128">
 
 # COSMIC HARDWARE MONITOR
 
@@ -130,11 +132,11 @@ cargo install just
 ### 2. Clone and install
 
 ```bash
-git clone https://github.com/Kai-J-G/COSMIC---Hardware-Monitor-applet.git
+git clone https://github.com/Kai-J-G/Cosmic-Hardware-Monitor.git
 ```
 
 ```bash
-cd COSMIC---Hardware-Monitor-applet && just install
+cd Cosmic-Hardware-Monitor && just install
 ```
 
 That's it. `just install` compiles an optimised release build and installs it
@@ -152,10 +154,10 @@ Everything lands under `~/.local`, so nothing touches system directories:
 
 | File | Path |
 | --- | --- |
-| Executable | `~/.local/bin/cosmic-ext-temptyle` |
-| Desktop entry | `~/.local/share/applications/com.github.neojakey.cosmic-ext-temptyle.desktop` |
-| AppStream metainfo | `~/.local/share/metainfo/com.github.neojakey.cosmic-ext-temptyle.metainfo.xml` |
-| Icons | `~/.local/share/icons/hicolor/scalable/apps/com.github.neojakey.cosmic-ext-temptyle{,-symbolic}.svg` |
+| Executable | `~/.local/bin/cosmic-ext-hardware-monitor` |
+| Desktop entry | `~/.local/share/applications/io.github.kaijg.CosmicHardwareMonitor.desktop` |
+| AppStream metainfo | `~/.local/share/metainfo/io.github.kaijg.CosmicHardwareMonitor.metainfo.xml` |
+| Icons | `~/.local/share/icons/hicolor/scalable/apps/io.github.kaijg.CosmicHardwareMonitor{,-symbolic}.svg` |
 
 The desktop entry's `Exec=` line is rewritten to the absolute path of the
 installed binary, so the applet works regardless of your `PATH`.
@@ -182,7 +184,7 @@ that your user can no longer write to.
 
 1. Open **COSMIC Settings → Desktop → Panel → Applets**.
 2. Click **Add Applet**.
-3. Select **Hardware Monitor** and place it wherever you like — next to the
+3. Select **Cosmic Hardware Monitor** and place it wherever you like — next to the
    clock works well.
 4. Click the panel icon to open the popup.
 
@@ -226,11 +228,11 @@ cargo clean
 ```
 
 Your saved settings live in
-`~/.config/cosmic/com.github.neojakey.cosmic-ext-temptyle/` and are left alone.
+`~/.config/cosmic/io.github.kaijg.CosmicHardwareMonitor/` and are left alone.
 Delete that directory if you want them gone too:
 
 ```bash
-rm -r ~/.config/cosmic/com.github.neojakey.cosmic-ext-temptyle
+rm -r ~/.config/cosmic/io.github.kaijg.CosmicHardwareMonitor
 ```
 
 ---
@@ -242,7 +244,7 @@ Every recipe in the `justfile`:
 | Command | What it does |
 | --- | --- |
 | `just` | Same as `just build-release` |
-| `just build-release` | Optimised build → `target/release/cosmic-ext-temptyle` |
+| `just build-release` | Optimised build → `target/release/cosmic-ext-hardware-monitor` |
 | `just build-debug` | Fast, unoptimised build |
 | `just run` | Runs the applet directly with `RUST_BACKTRACE=1` |
 | `just check` | `cargo check` and `cargo test` |
@@ -282,7 +284,7 @@ pkill cosmic-panel
 If it's still missing, confirm the desktop entry landed in the right place:
 
 ```bash
-ls ~/.local/share/applications/com.github.neojakey.cosmic-ext-temptyle.desktop
+ls ~/.local/share/applications/io.github.kaijg.CosmicHardwareMonitor.desktop
 ```
 
 A missing file means `just install` didn't finish — re-run it and check for

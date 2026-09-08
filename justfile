@@ -1,5 +1,5 @@
-name := 'cosmic-ext-temptyle'
-export APPID := 'com.github.neojakey.cosmic-ext-temptyle'
+name := 'cosmic-ext-hardware-monitor'
+export APPID := 'io.github.kaijg.CosmicHardwareMonitor'
 
 prefix := env_var_or_default("PREFIX", env_var('HOME') / '.local')
 bin_dir := prefix / 'bin'
@@ -27,8 +27,8 @@ install: build-release
     install -Dm0644 data/{{APPID}}.metainfo.xml {{metainfo_dir}}/{{APPID}}.metainfo.xml
     install -Dm0644 data/icons/{{APPID}}-symbolic.svg {{icon_dir}}/{{APPID}}-symbolic.svg
     install -Dm0644 data/icons/{{APPID}}.svg {{icon_dir}}/{{APPID}}.svg
-    @echo "Successfully installed TempTyle applet to {{bin_dir}}/{{name}}"
-    @echo "You can now add TempTyle to your COSMIC Panel via: COSMIC Settings -> Desktop -> Panel -> Applets -> Add Applet"
+    @echo "Installed Cosmic Hardware Monitor to {{bin_dir}}/{{name}}"
+    @echo "Add it via: COSMIC Settings -> Desktop -> Panel -> Applets -> Add Applet"
 
 uninstall:
     rm -f {{bin_dir}}/{{name}}
@@ -36,7 +36,7 @@ uninstall:
     rm -f {{metainfo_dir}}/{{APPID}}.metainfo.xml
     rm -f {{icon_dir}}/{{APPID}}-symbolic.svg
     rm -f {{icon_dir}}/{{APPID}}.svg
-    @echo "Uninstalled TempTyle from {{prefix}}"
+    @echo "Uninstalled Cosmic Hardware Monitor from {{prefix}}"
 
 check:
     cargo check

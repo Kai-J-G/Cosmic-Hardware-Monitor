@@ -1,4 +1,5 @@
-//! TempTyle — a hardware and thermal monitor applet for the COSMIC desktop.
+//! Cosmic Hardware Monitor — a hardware and thermal monitor applet for the
+//! COSMIC desktop.
 //!
 //! # How it fits together
 //!
@@ -36,7 +37,7 @@
 //!   show it in the matching view.
 //! - **Change how the popup looks** — the tab views are in [`views`], and the
 //!   card and badge styling they share is in [`views::style`].
-//! - **Add a setting** — extend [`config::TempTyleConfig`], add a
+//! - **Add a setting** — extend [`config::HardwareMonitorConfig`], add a
 //!   [`app::Message`] variant to change it, and add a control to
 //!   [`views::settings`].
 //!

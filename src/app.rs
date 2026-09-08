@@ -11,7 +11,7 @@ use cosmic::iced::window::Id;
 use cosmic::iced::Subscription;
 use cosmic::{Application, Element};
 
-use crate::config::{TempTyleConfig, ThemePreference, APP_ID, CONFIG_VERSION};
+use crate::config::{HardwareMonitorConfig, ThemePreference, APP_ID, CONFIG_VERSION};
 use crate::hardware::types::{HardwareSnapshot, TemperatureUnit};
 use crate::hardware::HardwareCollector;
 use crate::views;
@@ -60,7 +60,7 @@ impl History {
 pub struct AppModel {
     pub core: Core,
     pub popup: Option<Id>,
-    pub config: TempTyleConfig,
+    pub config: HardwareMonitorConfig,
     pub unit: TemperatureUnit,
     pub active_tab: ActiveTab,
     /// Whether the overview shows its expanded detail sections.
@@ -88,7 +88,7 @@ pub enum Message {
     PopupClosed(Id),
     Surface(cosmic::surface::Action),
     /// The config changed, possibly in another instance of the applet.
-    ConfigChanged(TempTyleConfig),
+    ConfigChanged(HardwareMonitorConfig),
 }
 
 impl AppModel {
@@ -159,7 +159,7 @@ impl Application for AppModel {
         // Start from the persisted config, falling back to defaults.
         let config = Config::new(APP_ID, CONFIG_VERSION)
             .ok()
-            .and_then(|handler| TempTyleConfig::get_entry(&handler).ok())
+            .and_then(|handler| HardwareMonitorConfig::get_entry(&handler).ok())
             .unwrap_or_default();
 
         let mut collector = HardwareCollector::new();
@@ -251,7 +251,7 @@ impl Application for AppModel {
             cosmic::iced::time::every(interval).map(|_| Message::Tick),
             // Picks up changes made by another instance of the applet.
             self.core()
-                .watch_config::<TempTyleConfig>(APP_ID)
+                .watch_config::<HardwareMonitorConfig>(APP_ID)
                 .map(|update| Message::ConfigChanged(update.config)),
         ])
     }

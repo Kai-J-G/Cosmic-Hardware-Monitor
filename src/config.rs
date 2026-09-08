@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::hardware::types::TemperatureUnit;
 
-pub const APP_ID: &str = "com.github.neojakey.cosmic-ext-temptyle";
+pub const APP_ID: &str = "io.github.kaijg.CosmicHardwareMonitor";
 pub const CONFIG_VERSION: u64 = 1;
 
 /// Whether the popup follows the desktop theme or is pinned to one appearance.
@@ -33,13 +33,13 @@ impl ThemePreference {
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, CosmicConfigEntry)]
 #[version = 1]
-pub struct TempTyleConfig {
+pub struct HardwareMonitorConfig {
     pub fahrenheit: bool,
     pub refresh_interval_secs: u64,
     pub theme_pref: ThemePreference,
 }
 
-impl TempTyleConfig {
+impl HardwareMonitorConfig {
     pub fn unit(&self) -> TemperatureUnit {
         if self.fahrenheit {
             TemperatureUnit::Fahrenheit
@@ -49,7 +49,7 @@ impl TempTyleConfig {
     }
 }
 
-impl Default for TempTyleConfig {
+impl Default for HardwareMonitorConfig {
     fn default() -> Self {
         Self {
             fahrenheit: false,

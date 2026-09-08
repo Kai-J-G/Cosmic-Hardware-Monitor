@@ -921,7 +921,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cosmic-ext-temptyle"
+name = "cosmic-ext-hardware-monitor"
 version = "1.0.0"
 dependencies = [
  "libc",

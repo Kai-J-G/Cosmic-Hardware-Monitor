@@ -1,10 +1,10 @@
 [package]
-name = "cosmic-ext-temptyle"
+name = "cosmic-ext-hardware-monitor"
 version = "1.0.0"
 edition = "2021"
 license = "MIT"
-description = "Native COSMIC desktop applet hardware temperature and system monitor"
-repository = "https://github.com/Kai-J-G/COSMIC---Hardware-Monitor-applet"
+description = "Native hardware and thermal monitor applet for the COSMIC desktop"
+repository = "https://github.com/Kai-J-G/Cosmic-Hardware-Monitor"
 
 [dependencies]
 # Persisted settings are (de)serialised by cosmic-config.

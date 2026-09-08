@@ -1,11 +1,11 @@
 [Desktop Entry]
-Name=Hardware Monitor
+Name=Cosmic Hardware Monitor
 Comment=Hardware temperature, CPU, GPU, NVMe and system monitor for COSMIC Desktop
 Type=Application
-Exec=cosmic-ext-temptyle
+Exec=cosmic-ext-hardware-monitor
 Terminal=false
 Categories=Utility;System;Monitor;X-Cosmic;
-Icon=com.github.neojakey.cosmic-ext-temptyle
+Icon=io.github.kaijg.CosmicHardwareMonitor
 StartupNotify=true
 NoDisplay=false
 X-CosmicApplet=true

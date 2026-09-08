@@ -5,7 +5,7 @@ use cosmic::widget::{button, column, row, text};
 use cosmic::Element;
 
 use crate::app::Message;
-use crate::config::{TempTyleConfig, ThemePreference};
+use crate::config::{HardwareMonitorConfig, ThemePreference};
 use crate::hardware::types::TemperatureUnit;
 use crate::views::nav_row;
 
@@ -34,7 +34,7 @@ const THEMES: [(ThemePreference, &str, &str); 3] = [
     ),
 ];
 
-pub fn view<'a>(config: &TempTyleConfig, unit: TemperatureUnit) -> Element<'a, Message> {
+pub fn view<'a>(config: &HardwareMonitorConfig, unit: TemperatureUnit) -> Element<'a, Message> {
     let sp = cosmic::theme::spacing();
 
     column![
