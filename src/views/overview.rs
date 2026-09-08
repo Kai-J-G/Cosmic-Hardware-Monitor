@@ -5,6 +5,7 @@ use cosmic::widget::{column, container, determinate_linear, icon, mouse_area, ro
 use cosmic::Element;
 
 use crate::app::{ActiveTab, Message};
+use crate::fl;
 use crate::hardware::types::{HardwareSnapshot, TemperatureUnit, ThermalStatus};
 use crate::views::circular_gauge::CircularGauge;
 use crate::views::{fmt, label_and_value, style, EMERALD};
@@ -24,7 +25,7 @@ pub fn view<'a>(
     } else {
         // Collapsed, the network rates are the one thing worth keeping visible.
         centered(
-            column![text::caption("Network").size(11), net_rates(snapshot, NetLabels::Compact)]
+            column![text::caption(fl!("network")).size(11), net_rates(snapshot, NetLabels::Compact)]
                 .spacing(2)
                 .align_x(Alignment::Center),
         )
@@ -42,8 +43,8 @@ fn dials<'a>(
     unit: TemperatureUnit,
     is_dark: bool,
 ) -> Element<'a, Message> {
-    let dial = |percent: f32, label: &'static str, sub: Option<String>, tab: ActiveTab| {
-        let gauge = CircularGauge::new(percent, format!("{percent:.0}%"), label, EMERALD)
+    let dial = |percent: f32, label: String, sub: Option<String>, tab: ActiveTab| {
+        let gauge = CircularGauge::new(percent, fmt::percent(percent, 0), label, EMERALD)
             .with_sub_text(sub)
             .with_theme(is_dark);
 
@@ -62,12 +63,12 @@ fn dials<'a>(
     let mut dials = row![
         dial(
             snapshot.cpu.overall_usage,
-            "CPU",
+            fl!("cpu"),
             Some(unit.format_short(snapshot.cpu.package_temp)),
             ActiveTab::CpuDetail,
         ),
-        dial(gpu_load, "GPU", gpu_temp, ActiveTab::GpuDetail),
-        dial(snapshot.memory.percent, "Memory", None, ActiveTab::MemoryDetail),
+        dial(gpu_load, fl!("gpu"), gpu_temp, ActiveTab::GpuDetail),
+        dial(snapshot.memory.percent, fl!("memory"), None, ActiveTab::MemoryDetail),
     ]
     .spacing(18)
     .align_y(Alignment::Center);
@@ -75,7 +76,7 @@ fn dials<'a>(
     // Dropped rather than shown at zero where the root filesystem cannot be
     // measured, which is the case inside a Flatpak sandbox.
     if let Some(root) = snapshot.storage_metrics.root() {
-        dials = dials.push(dial(root.percent_used, "Disk", None, ActiveTab::StorageDetail));
+        dials = dials.push(dial(root.percent_used, fl!("disk"), None, ActiveTab::StorageDetail));
     }
 
     dials.into()
@@ -114,7 +115,7 @@ fn details<'a>(
         storage_section(snapshot, unit),
         style::divider(is_dark),
         label_and_value(
-            text("Uptime ›").size(12),
+            text(fl!("uptime")).size(12),
             text(fmt::uptime(snapshot.system.uptime_seconds)).size(12),
         ),
     ]
@@ -128,7 +129,7 @@ fn network_section<'a>(snapshot: &'a HardwareSnapshot) -> Element<'a, Message> {
         centered(
             row![
                 icon::from_name("network-transmit-receive-symbolic").size(14),
-                text::title3("Network").size(13),
+                text::title3(fl!("network")).size(13),
             ]
             .spacing(6)
             .align_y(Alignment::Center)
@@ -155,9 +156,11 @@ fn net_rates<'a>(snapshot: &'a HardwareSnapshot, labels: NetLabels) -> Element<'
 
     let (up, down, size) = match labels {
         NetLabels::Compact => (format!("↑ {upload}"), format!("{download} ↓"), 11),
-        NetLabels::Descriptive => {
-            (format!("Upload: ↑ {upload}"), format!("Download: {download} ↓"), 12)
-        }
+        NetLabels::Descriptive => (
+            format!("{}: ↑ {upload}", fl!("upload")),
+            format!("{}: {download} ↓", fl!("download")),
+            12,
+        ),
     };
 
     row![
@@ -178,20 +181,20 @@ fn cpu_usage_section<'a>(snapshot: &'a HardwareSnapshot, is_dark: bool) -> Eleme
         Color::from_rgba(0.0, 0.0, 0.0, 0.35)
     };
 
-    let entry = |color: Color, label: &'a str, percent: f32| {
+    let entry = |color: Color, label: String, percent: f32| {
         label_and_value(
             row![style::swatch(color, 8.0, 2.0), text(label).size(12)]
                 .spacing(6)
                 .align_y(Alignment::Center),
-            text(format!("{percent:.0}%")).size(12),
+            text(fmt::percent(percent, 0)).size(12),
         )
     };
 
     column![
-        text::title3("CPU Usage").size(13),
-        entry(Color::from_rgb(0.23, 0.51, 0.96), "user", snapshot.cpu.user_usage),
-        entry(Color::from_rgb(0.94, 0.27, 0.27), "sys", snapshot.cpu.sys_usage),
-        entry(idle_color, "idle", snapshot.cpu.idle_usage),
+        text::title3(fl!("cpu-usage")).size(13),
+        entry(Color::from_rgb(0.23, 0.51, 0.96), fl!("usage-user"), snapshot.cpu.user_usage),
+        entry(Color::from_rgb(0.94, 0.27, 0.27), fl!("usage-system"), snapshot.cpu.sys_usage),
+        entry(idle_color, fl!("usage-idle"), snapshot.cpu.idle_usage),
     ]
     .spacing(4)
     .width(Length::FillPortion(1))
@@ -200,12 +203,12 @@ fn cpu_usage_section<'a>(snapshot: &'a HardwareSnapshot, is_dark: bool) -> Eleme
 
 /// The 1, 5 and 15 minute load averages.
 fn load_average_section<'a>(snapshot: &'a HardwareSnapshot) -> Element<'a, Message> {
-    let windows = ["1m", "5m", "15m"];
-    let mut section = column![text::title3("Load avg").size(13)];
+    let windows = [fl!("load-1m"), fl!("load-5m"), fl!("load-15m")];
+    let mut section = column![text::title3(fl!("load-average")).size(13)];
 
-    for (window, load) in windows.iter().zip(snapshot.system.load_avg) {
+    for (window, load) in windows.into_iter().zip(snapshot.system.load_avg) {
         section = section
-            .push(label_and_value(text(*window).size(12), text(format!("{load:.2}")).size(12)));
+            .push(label_and_value(text(window).size(12), text(format!("{load:.2}")).size(12)));
     }
 
     section.spacing(4).width(Length::FillPortion(1)).into()
@@ -215,27 +218,29 @@ fn gpu_section<'a>(snapshot: &'a HardwareSnapshot, is_dark: bool) -> Element<'a,
     let sp = cosmic::theme::spacing();
 
     let content: Element<'a, Message> = match &snapshot.gpu {
-        None => text::caption("Integrated graphics or GPU idle").size(11).into(),
+        None => text::caption(fl!("gpu-absent")).size(11).into(),
         Some(gpu) => {
-            let line = |label: &'a str, value: String| {
+            let line = |label: String, value: String| {
                 label_and_value(text::caption(label).size(11), text(value).size(11))
             };
 
             let mut readings = column![
-                line("Memory Used", fmt::bytes(gpu.vram_used_bytes)),
-                line("Memory Size", fmt::bytes(gpu.vram_total_bytes)),
+                line(fl!("gpu-memory-used"), fmt::bytes(gpu.vram_used_bytes)),
+                line(fl!("gpu-memory-size"), fmt::bytes(gpu.vram_total_bytes)),
             ]
             .spacing(3)
             .width(Length::FillPortion(1));
 
             if let Some(watts) = gpu.power_draw_watts {
-                readings = readings.push(line("Power Draw", format!("{watts:.1} W")));
+                let draw = format!("{watts:.1}");
+                readings = readings
+                    .push(line(fl!("power-draw"), fl!("unit-watts", value = draw.as_str())));
             }
 
             let gauge = CircularGauge::new(
                 gpu.utilization_percent as f32,
-                format!("{}%", gpu.utilization_percent),
-                "",
+                fmt::percent(gpu.utilization_percent as f32, 0),
+                String::new(),
                 EMERALD,
             )
             .with_theme(is_dark);
@@ -248,7 +253,7 @@ fn gpu_section<'a>(snapshot: &'a HardwareSnapshot, is_dark: bool) -> Element<'a,
         }
     };
 
-    column![text::title3("GPU Usage").size(13), content].spacing(6).width(Length::Fill).into()
+    column![text::title3(fl!("gpu-usage")).size(13), content].spacing(6).width(Length::Fill).into()
 }
 
 /// Root filesystem usage, with a temperature badge per physical drive.
@@ -260,7 +265,7 @@ fn storage_section<'a>(
 
     let heading = row![
         icon::from_name("drive-harddisk-symbolic").size(15),
-        text::title3("Storage").size(13),
+        text::title3(fl!("storage")).size(13),
         cosmic::widget::Space::new().width(Length::Fill),
         text::caption(root.map_or_else(String::new, |r| format!(
             "{:.1} GB / {:.1} GB ({:.0}%)",

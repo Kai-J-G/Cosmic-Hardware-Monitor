@@ -5,9 +5,10 @@ use cosmic::widget::{column, container, mouse_area, row, text};
 use cosmic::Element;
 
 use crate::app::Message;
+use crate::fl;
 use crate::hardware::types::{CpuCoreInfo, CpuInfo, TemperatureUnit, ThermalStatus};
 use crate::views::vertical_bar::VerticalBar;
-use crate::views::{graph_card, nav_row, stat_card, style};
+use crate::views::{fmt, graph_card, nav_row, stat_card, style};
 
 /// Temperature range the per-core bars span, in Celsius.
 const BAR_MIN_TEMP: f32 = 25.0;
@@ -25,11 +26,17 @@ pub fn view<'a>(
     let state_color = Color::from_rgb(r, g, b);
 
     let headline = row![
-        stat_card("Temperature", unit.format(cpu.package_temp), None, Some(state_color), is_dark),
-        stat_card("Load / Utilization", format!("{:.1}%", cpu.overall_usage), None, None, is_dark),
+        stat_card(fl!("temperature"), unit.format(cpu.package_temp), None, Some(state_color), is_dark),
         stat_card(
-            "Clock Speed",
-            format!("{:.2} GHz", cpu.avg_freq_mhz as f32 / 1000.0),
+            fl!("load-utilization"),
+            fmt::percent(cpu.overall_usage, 1),
+            None,
+            None,
+            is_dark,
+        ),
+        stat_card(
+            fl!("clock-speed"),
+            ghz(cpu.avg_freq_mhz),
             None,
             None,
             is_dark,
@@ -42,7 +49,7 @@ pub fn view<'a>(
         nav_row(cpu.model.clone()),
         headline,
         telemetry(cpu, is_dark),
-        graph_card("CPU Temperature Curve", history, state_color, is_dark),
+        graph_card(fl!("cpu-temperature-curve"), history, state_color, is_dark),
         cores_toggle(cpu.cores.len(), expanded, is_dark),
     ]
     .spacing(sp.space_s)
@@ -57,28 +64,36 @@ pub fn view<'a>(
 
 /// One-line strip of secondary counters.
 fn telemetry<'a>(cpu: &'a CpuInfo, is_dark: bool) -> Element<'a, Message> {
-    let entry = |label: &'a str, value: String| {
+    let entry = |label: String, value: String| {
         row![text::caption(label).size(11), text::body(value).size(11)]
             .spacing(4)
             .align_y(Alignment::Center)
     };
 
-    let power = cpu.power_watts.map_or_else(|| "Estimating…".to_string(), |w| format!("{w:.1} W"));
+    let power = cpu.power_watts.map_or_else(
+        || fl!("power-estimating"),
+        |w| {
+            let value = format!("{w:.1}");
+            fl!("unit-watts", value = value.as_str())
+        },
+    );
     let separator = || text::caption("·").size(11);
 
-    let mut strip = row![entry("Power Draw:", power)].spacing(8).align_y(Alignment::Center);
+    let mut strip =
+        row![entry(fl!("power-draw-label"), power)].spacing(8).align_y(Alignment::Center);
 
     // Omitted rather than shown wrong where the count is unavailable, which is
     // the case inside a Flatpak sandbox.
     if let Some(processes) = cpu.num_processes {
-        strip = strip.push(separator()).push(entry("Processes:", processes.to_string()));
+        strip =
+            strip.push(separator()).push(entry(fl!("processes-label"), processes.to_string()));
     }
 
     let strip = strip
         .push(separator())
-        .push(entry("Threads:", cpu.num_threads.to_string()))
+        .push(entry(fl!("threads-label"), cpu.num_threads.to_string()))
         .push(separator())
-        .push(entry("Handles:", cpu.num_handles.to_string()));
+        .push(entry(fl!("handles-label"), cpu.num_handles.to_string()));
 
     container(strip)
         .padding([6, 12])
@@ -91,7 +106,7 @@ fn telemetry<'a>(cpu: &'a CpuInfo, is_dark: bool) -> Element<'a, Message> {
 /// Header that expands and collapses the per-core grid.
 fn cores_toggle<'a>(count: usize, expanded: bool, is_dark: bool) -> Element<'a, Message> {
     let label = row![
-        text(format!("All {count} Cores")).size(12),
+        text(fl!("all-cores", count = count)).size(12),
         cosmic::widget::Space::new().width(Length::Fill),
         text(if expanded { "⌃" } else { "⌄" }).size(15),
     ]
@@ -141,6 +156,12 @@ fn core_row<'a>(
     cards.into()
 }
 
+/// A clock speed in GHz, from a reading in MHz.
+fn ghz(mhz: u32) -> String {
+    let value = format!("{:.2}", mhz as f32 / 1000.0);
+    fl!("unit-gigahertz", value = value.as_str())
+}
+
 /// A single core: a thermal bar with its temperature, load and clock.
 fn core_card<'a>(
     core: &'a CpuCoreInfo,
@@ -155,7 +176,7 @@ fn core_card<'a>(
         text::caption(&core.label).size(10),
         VerticalBar::new(fill, Color::from_rgb(r, g, b), is_dark).view(10.0, 54.0),
         text::title3(unit.format_short(core.temp)).size(13),
-        text::caption(format!("{:.0}%", core.usage_percent)).size(10),
+        text::caption(fmt::percent(core.usage_percent, 0)).size(10),
     ]
     .spacing(3)
     .align_x(Alignment::Center);

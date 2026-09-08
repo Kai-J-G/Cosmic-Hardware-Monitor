@@ -5,40 +5,36 @@ use cosmic::widget::{button, column, row, text};
 use cosmic::Element;
 
 use crate::app::Message;
+use crate::fl;
 use crate::config::{HardwareMonitorConfig, ThemePreference};
 use crate::hardware::types::TemperatureUnit;
 use crate::views::nav_row;
 
-/// Refresh rates offered, as `(seconds, button label)`.
+/// Refresh rates offered, paired with the id of their button label.
 ///
 /// Every reading is taken fresh on each tick, so a faster interval means more
 /// file reads — hence the hints in the labels.
-const INTERVALS: [(u64, &str); 4] =
-    [(1, "1s (Fast)"), (2, "2s (Normal)"), (3, "3s"), (5, "5s (Battery-friendly)")];
-
-const THEMES: [(ThemePreference, &str, &str); 3] = [
-    (
-        ThemePreference::System,
-        "System / Adapt to Desktop Theme",
-        "Automatically switches between dark and light to match COSMIC",
-    ),
-    (
-        ThemePreference::Dark,
-        "Black (Always Dark)",
-        "Deep dark background with high-contrast emerald and cyan accents",
-    ),
-    (
-        ThemePreference::Light,
-        "White (Always Light)",
-        "Clean light background with crisp dark typography",
-    ),
+const INTERVALS: [(u64, fn() -> String); 4] = [
+    (1, || fl!("interval-1s")),
+    (2, || fl!("interval-2s")),
+    (3, || fl!("interval-3s")),
+    (5, || fl!("interval-5s")),
 ];
+
+/// Theme choices, each with a name and a line explaining it.
+fn themes() -> [(ThemePreference, String, String); 3] {
+    [
+        (ThemePreference::System, fl!("theme-system"), fl!("theme-system-description")),
+        (ThemePreference::Dark, fl!("theme-dark"), fl!("theme-dark-description")),
+        (ThemePreference::Light, fl!("theme-light"), fl!("theme-light-description")),
+    ]
+}
 
 pub fn view<'a>(config: &HardwareMonitorConfig, unit: TemperatureUnit) -> Element<'a, Message> {
     let sp = cosmic::theme::spacing();
 
     column![
-        nav_row("Settings"),
+        nav_row(fl!("settings")),
         theme_section(config.theme_pref),
         unit_section(unit),
         interval_section(config.refresh_interval_secs),
@@ -53,7 +49,7 @@ fn theme_section<'a>(current: ThemePreference) -> Element<'a, Message> {
     let sp = cosmic::theme::spacing();
     let mut options = column![].spacing(sp.space_xs).width(Length::Fill);
 
-    for (preference, name, description) in THEMES {
+    for (preference, name, description) in themes() {
         let selected = current == preference;
         let label = column![
             row![
@@ -76,26 +72,19 @@ fn theme_section<'a>(current: ThemePreference) -> Element<'a, Message> {
         );
     }
 
-    section(
-        "Theme Adaptation",
-        Some(
-            "Choose whether Hardware Monitor follows your desktop theme or stays locked \
-             to a light or dark appearance.",
-        ),
-        options,
-    )
+    section(fl!("theme-title"), Some(fl!("theme-description")), options)
 }
 
 fn unit_section<'a>(current: TemperatureUnit) -> Element<'a, Message> {
     let choices = row![
-        choice("Celsius (°C)", current == TemperatureUnit::Celsius)
+        choice(fl!("unit-celsius"), current == TemperatureUnit::Celsius)
             .on_press(Message::SetUnit(TemperatureUnit::Celsius)),
-        choice("Fahrenheit (°F)", current == TemperatureUnit::Fahrenheit)
+        choice(fl!("unit-fahrenheit"), current == TemperatureUnit::Fahrenheit)
             .on_press(Message::SetUnit(TemperatureUnit::Fahrenheit)),
     ]
     .spacing(cosmic::theme::spacing().space_s);
 
-    section("Temperature Unit", None, choices)
+    section(fl!("unit-title"), None, choices)
 }
 
 fn interval_section<'a>(current_secs: u64) -> Element<'a, Message> {
@@ -103,16 +92,16 @@ fn interval_section<'a>(current_secs: u64) -> Element<'a, Message> {
 
     for (seconds, label) in INTERVALS {
         choices = choices
-            .push(choice(label, current_secs == seconds).on_press(Message::SetInterval(seconds)));
+            .push(choice(label(), current_secs == seconds).on_press(Message::SetInterval(seconds)));
     }
 
-    section("Refresh Interval", None, choices)
+    section(fl!("interval-title"), None, choices)
 }
 
 /// A titled block of settings, with an optional line of explanation.
 fn section<'a>(
-    title: &'a str,
-    description: Option<&'a str>,
+    title: String,
+    description: Option<String>,
     content: impl Into<Element<'a, Message>>,
 ) -> Element<'a, Message> {
     let mut block = column![text::title3(title).size(14)];
@@ -129,7 +118,7 @@ fn section<'a>(
 }
 
 /// A button that reads as selected or not.
-fn choice(label: &str, selected: bool) -> cosmic::widget::Button<'_, Message> {
+fn choice<'a>(label: String, selected: bool) -> cosmic::widget::Button<'a, Message> {
     button::custom(text(label).size(12)).padding([6, 16]).class(button_class(selected))
 }
 

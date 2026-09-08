@@ -40,14 +40,24 @@
 //! - **Add a setting** — extend [`config::HardwareMonitorConfig`], add a
 //!   [`app::Message`] variant to change it, and add a control to
 //!   [`views::settings`].
+//! - **Add or change a user-visible string** — every one lives in
+//!   `i18n/en/cosmic_ext_hardware_monitor.ftl` and is reached through
+//!   [`fl!`]. See [`i18n`].
+//! - **Translate the applet** — copy `i18n/en/` to `i18n/<language>/` and
+//!   translate the values. Nothing else needs to change.
 //!
 //! [Elm-architecture]: https://guide.elm-lang.org/architecture/
 
 mod app;
 mod config;
 mod hardware;
+mod i18n;
 mod views;
 
 fn main() -> cosmic::iced::Result {
+    // Match the desktop's configured languages before any string is rendered.
+    let languages = i18n_embed::DesktopLanguageRequester::requested_languages();
+    i18n::init(&languages);
+
     cosmic::applet::run::<app::AppModel>(())
 }

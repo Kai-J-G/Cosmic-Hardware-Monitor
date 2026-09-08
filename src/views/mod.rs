@@ -29,6 +29,7 @@ use cosmic::widget::{button, column, container, row, text, Space};
 use cosmic::Element;
 
 use crate::app::{ActiveTab, AppModel, Message};
+use crate::fl;
 
 /// Neutral accent for readings that carry no thermal meaning.
 pub const EMERALD: Color = Color::from_rgb(0.0, 0.90, 0.46);
@@ -90,7 +91,7 @@ fn header<'a>(active_tab: ActiveTab) -> Element<'a, Message> {
     row![
         // Balances the button's width so the title sits truly centred.
         Space::new().width(Length::Fixed(gutter)),
-        container(text::title3("Hardware Monitor").size(15))
+        container(text::title3(fl!("app-title")).size(15))
             .align_x(Alignment::Center)
             .width(Length::Fill),
         container(settings_btn).align_x(Alignment::End).width(Length::Fixed(gutter)),
@@ -103,7 +104,7 @@ fn header<'a>(active_tab: ActiveTab) -> Element<'a, Message> {
 /// Breadcrumb shown at the top of every detail tab: a way back, then a title.
 pub fn nav_row<'a>(title: impl Into<String>) -> Element<'a, Message> {
     row![
-        button::text("← Overview")
+        button::text(fl!("back-to-overview"))
             .padding([6, 12])
             .class(cosmic::theme::Button::Standard)
             .on_press(Message::SelectTab(ActiveTab::Overview)),
@@ -120,7 +121,7 @@ pub fn nav_row<'a>(title: impl Into<String>) -> Element<'a, Message> {
 ///
 /// `accent` tints the card, marking the reading as thermally significant.
 pub fn stat_card<'a>(
-    label: &'a str,
+    label: String,
     value: String,
     sub: Option<String>,
     accent: Option<Color>,
@@ -148,7 +149,7 @@ pub fn stat_card<'a>(
 
 /// A labelled sparkline in a card, used by every detail tab that plots history.
 pub fn graph_card<'a>(
-    label: &'a str,
+    label: String,
     history: &'a [f32],
     color: Color,
     is_dark: bool,

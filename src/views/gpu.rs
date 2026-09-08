@@ -5,6 +5,7 @@ use cosmic::widget::{column, container, determinate_linear, row, text};
 use cosmic::Element;
 
 use crate::app::Message;
+use crate::fl;
 use crate::hardware::types::{GpuInfo, TemperatureUnit, ThermalStatus};
 use crate::views::{fmt, graph_card, nav_row, label_and_value, stat_card, style};
 
@@ -26,7 +27,7 @@ pub fn view<'a>(
     column![
         nav_row(gpu.name.clone()),
         metrics(gpu, unit, state_color, is_dark),
-        graph_card("GPU Temperature Curve", history, state_color, is_dark),
+        graph_card(fl!("gpu-temperature-curve"), history, state_color, is_dark),
         vram(gpu, is_dark),
     ]
     .spacing(sp.space_s)
@@ -42,29 +43,26 @@ fn metrics<'a>(
     state_color: Color,
     is_dark: bool,
 ) -> Element<'a, Message> {
-    let or_na = |value: Option<String>| value.unwrap_or_else(|| "N/A".to_string());
+    let or_na = |value: Option<String>| value.unwrap_or_else(|| fl!("not-available"));
 
     row![
-        stat_card("Utilization", format!("{}%", gpu.utilization_percent), None, None, is_dark),
         stat_card(
-            "Clock Speed",
-            or_na(gpu.clock_mhz.map(|mhz| format!("{mhz} MHz"))),
+            fl!("utilization"),
+            fmt::percent(gpu.utilization_percent as f32, 0),
             None,
             None,
             is_dark,
         ),
+        stat_card(fl!("clock-speed"), or_na(gpu.clock_mhz.map(megahertz)), None, None, is_dark),
+        stat_card(fl!("power-draw"), or_na(gpu.power_draw_watts.map(watts)), None, None, is_dark),
         stat_card(
-            "Power Draw",
-            or_na(gpu.power_draw_watts.map(|w| format!("{w:.1} W"))),
-            None,
-            None,
-            is_dark,
-        ),
-        stat_card(
-            "Temperature",
+            fl!("temperature"),
             unit.format(gpu.edge_temp),
             // The hotspot reading, where the vendor exposes one.
-            gpu.junction_temp.map(|j| format!("Junction: {}", unit.format_short(j))),
+            gpu.junction_temp.map(|j| {
+                let temperature = unit.format_short(j);
+                fl!("gpu-junction", temperature = temperature.as_str())
+            }),
             Some(state_color),
             is_dark,
         ),
@@ -84,13 +82,8 @@ fn vram<'a>(gpu: &'a GpuInfo, is_dark: bool) -> Element<'a, Message> {
 
     let content = column![
         label_and_value(
-            text::title3(format!("VRAM Usage: {percent:.1}%")).size(13),
-            text::caption(format!(
-                "{:.2} GB / {:.2} GB",
-                fmt::gb(gpu.vram_used_bytes),
-                fmt::gb(gpu.vram_total_bytes)
-            ))
-            .size(11),
+            text::title3(vram_heading(percent)).size(13),
+            text::caption(vram_used_of_total(gpu)).size(11),
         ),
         determinate_linear((percent / 100.0).clamp(0.0, 1.0)),
     ]
@@ -104,13 +97,34 @@ fn vram<'a>(gpu: &'a GpuInfo, is_dark: bool) -> Element<'a, Message> {
         .into()
 }
 
+/// `1.72 GB / 15.92 GB`, with both sizes localized.
+fn vram_used_of_total(gpu: &GpuInfo) -> String {
+    let (used, total) = (fmt::bytes(gpu.vram_used_bytes), fmt::bytes(gpu.vram_total_bytes));
+    fl!("vram-used-of-total", used = used.as_str(), total = total.as_str())
+}
+
+fn vram_heading(percent: f32) -> String {
+    let percent = format!("{percent:.1}");
+    fl!("vram-usage", percent = percent.as_str())
+}
+
+fn megahertz(value: u32) -> String {
+    let value = value.to_string();
+    fl!("unit-megahertz", value = value.as_str())
+}
+
+fn watts(value: f32) -> String {
+    let value = format!("{value:.1}");
+    fl!("unit-watts", value = value.as_str())
+}
+
 /// Shown when there is no discrete GPU, or no driver telemetry for it.
 fn unavailable<'a>(is_dark: bool) -> Element<'a, Message> {
     let sp = cosmic::theme::spacing();
 
     column![
-        nav_row("Graphics"),
-        container(text::body("No dedicated GPU detected or GPU metrics unavailable."))
+        nav_row(fl!("graphics")),
+        container(text::body(fl!("gpu-unavailable")))
             .padding(sp.space_m)
             .width(Length::Fill)
             .class(style::card(is_dark)),

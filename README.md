@@ -428,6 +428,28 @@ Add `drivetemp` to `/etc/modules-load.d/` to make it stick across reboots.
 
 ---
 
+## Translating
+
+Every user-visible string lives in `i18n/en/cosmic_ext_hardware_monitor.ftl`.
+To add a language, copy that file into `i18n/<code>/` and translate the values:
+
+```bash
+mkdir -p i18n/de && cp i18n/en/*.ftl i18n/de/
+```
+
+Leave the ids on the left of each `=` alone, and keep the `{ $placeholders }`
+intact — they are filled in at runtime. Nothing else needs changing: the files
+are embedded into the binary at build time, and the applet picks the language
+from your desktop's settings, falling back to English for anything untranslated.
+
+`cargo test` checks that every language defines the same set of ids, so a
+half-finished translation fails the build rather than showing English in the
+middle of a sentence.
+
+French is included as a worked example.
+
+---
+
 ## Project layout
 
 ```
@@ -443,6 +465,7 @@ src/
     storage.rs       drive temperatures, throughput, partitions
     system.rs        uptime, load, network, memory
     types.rs         the data the views render
+  i18n.rs            localization, and the fl!() macro the views use
   views/             renders the popup
     mod.rs           popup shell, plus the widgets every tab shares
     panel.rs         panel button and popup surface
@@ -451,6 +474,8 @@ src/
     overview.rs cores.rs gpu.rs memory.rs storage.rs settings.rs
     sparkline.rs circular_gauge.rs vertical_bar.rs
     sandbox.rs       detects a Flatpak sandbox, where two readings are hidden
+i18n/                translations, one Fluent file per language
+i18n.toml            names the fallback language and the assets directory
 data/                desktop entry, AppStream metainfo, icons, screenshots
 io.github.kai_j_g.CosmicHardwareMonitor.json   Flatpak manifest
 cargo-sources.json   pinned crate sources, for offline Flatpak builds

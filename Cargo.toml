@@ -11,6 +11,14 @@ repository = "https://github.com/Kai-J-G/CosmicHardwareMonitor"
 serde = { version = "1", features = ["derive"] }
 # statvfs(3), for partition sizes.
 libc = "0.2"
+# Localization. Fluent files under i18n/ are embedded into the binary, and
+# `fl!()` checks every message id against them at compile time.
+i18n-embed-fl = "0.10"
+rust-embed = "8"
+
+[dependencies.i18n-embed]
+version = "0.16"
+features = ["fluent-system", "desktop-requester"]
 
 [dependencies.libcosmic]
 git = "https://github.com/pop-os/libcosmic"

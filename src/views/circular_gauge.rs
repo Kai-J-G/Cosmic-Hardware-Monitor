@@ -18,13 +18,13 @@ pub struct CircularGauge {
     percent: f32,
     value_text: String,
     sub_text: Option<String>,
-    label: &'static str,
+    label: String,
     color: Color,
     is_dark: bool,
 }
 
 impl CircularGauge {
-    pub fn new(percent: f32, value_text: String, label: &'static str, color: Color) -> Self {
+    pub fn new(percent: f32, value_text: String, label: String, color: Color) -> Self {
         Self {
             percent: percent.clamp(0.0, 100.0),
             value_text,
@@ -48,7 +48,7 @@ impl CircularGauge {
 
     /// Renders the gauge with its caption beneath.
     pub fn view<Message: 'static>(self, diameter: f32) -> Element<'static, Message> {
-        let label = self.label;
+        let label = self.label.clone();
         let canvas = Canvas::new(self).width(Length::Fixed(diameter)).height(Length::Fixed(diameter));
 
         cosmic::widget::column![canvas, cosmic::widget::text(label).size(12)]

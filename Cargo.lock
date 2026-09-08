@@ -924,8 +924,11 @@ dependencies = [
 name = "cosmic-ext-hardware-monitor"
 version = "1.0.0"
 dependencies = [
+ "i18n-embed",
+ "i18n-embed-fl",
  "libc",
  "libcosmic",
+ "rust-embed",
  "serde",
 ]
 

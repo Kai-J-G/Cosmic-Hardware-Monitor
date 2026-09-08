@@ -5,6 +5,7 @@ use cosmic::widget::{column, container, determinate_linear, icon, row, scrollabl
 use cosmic::Element;
 
 use crate::app::Message;
+use crate::fl;
 use crate::hardware::types::{PartitionInfo, StorageMetrics};
 use crate::views::{fmt, nav_row, style, EMERALD};
 
@@ -24,8 +25,8 @@ pub fn view<'a>(metrics: &'a StorageMetrics, is_dark: bool) -> Element<'a, Messa
     let sp = cosmic::theme::spacing();
 
     let speeds = row![
-        speed_card("Read Speed", metrics.read_kbs, "go-up-symbolic", CYAN, is_dark),
-        speed_card("Write Speed", metrics.write_kbs, "go-down-symbolic", EMERALD, is_dark),
+        speed_card(fl!("read-speed"), metrics.read_kbs, "go-up-symbolic", CYAN, is_dark),
+        speed_card(fl!("write-speed"), metrics.write_kbs, "go-down-symbolic", EMERALD, is_dark),
     ]
     .spacing(sp.space_s)
     .width(Length::Fill);
@@ -34,10 +35,9 @@ pub fn view<'a>(metrics: &'a StorageMetrics, is_dark: bool) -> Element<'a, Messa
         // Inside a Flatpak sandbox the mount table describes the sandbox, so
         // the list is deliberately empty; say so rather than look broken.
         let reason = if crate::hardware::sandbox::is_flatpak() {
-            "Partition usage is unavailable in the Flatpak build, which cannot see \
-             the host's filesystems. Throughput above is still accurate."
+            fl!("partitions-sandboxed")
         } else {
-            "No mounted partitions detected."
+            fl!("partitions-none")
         };
         text::caption(reason).size(12).into()
     } else {
@@ -56,9 +56,9 @@ pub fn view<'a>(metrics: &'a StorageMetrics, is_dark: bool) -> Element<'a, Messa
     };
 
     column![
-        nav_row("Storage & Partition Metrics"),
+        nav_row(fl!("storage-title")),
         speeds,
-        text::title3("Mounted Partitions & Free Space").size(13),
+        text::title3(fl!("partitions-title")).size(13),
         partitions,
     ]
     .spacing(sp.space_m)
@@ -68,7 +68,7 @@ pub fn view<'a>(metrics: &'a StorageMetrics, is_dark: bool) -> Element<'a, Messa
 
 /// Throughput in one direction, tinted with its own accent.
 fn speed_card<'a>(
-    label: &'a str,
+    label: String,
     kbs: f32,
     icon_name: &'a str,
     accent: Color,
@@ -89,6 +89,18 @@ fn speed_card<'a>(
         .into()
 }
 
+/// The right-hand summary on a partition row.
+fn partition_summary(part: &PartitionInfo) -> String {
+    let percent = format!("{:.0}", part.percent_used);
+    let (free, total) = (fmt::bytes(part.free_bytes), fmt::bytes(part.total_bytes));
+    fl!(
+        "partition-summary",
+        percent = percent.as_str(),
+        free = free.as_str(),
+        total = total.as_str()
+    )
+}
+
 /// One mount point: where it is, how full it is, and how much is left.
 ///
 /// Deliberately two rows rather than three. The list has to fit however many
@@ -104,13 +116,7 @@ fn partition_card<'a>(part: &'a PartitionInfo, is_dark: bool) -> Element<'a, Mes
             .padding([1, 5])
             .class(style::chip(is_dark)),
         cosmic::widget::Space::new().width(Length::Fill),
-        text::caption(format!(
-            "{:.0}%  ·  {} free of {}",
-            part.percent_used,
-            fmt::bytes(part.free_bytes),
-            fmt::bytes(part.total_bytes)
-        ))
-        .size(11),
+        text::caption(partition_summary(part)).size(11),
     ]
     .spacing(sp.space_xxs)
     .align_y(Alignment::Center)

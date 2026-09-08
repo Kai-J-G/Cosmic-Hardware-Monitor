@@ -1,13 +1,22 @@
 //! Formatting helpers shared by the views, so the same quantity always reads
 //! the same way wherever it appears.
+//!
+//! Unit names come from the translation files, so a translator can adjust
+//! spacing or wording without touching code.
+
+use crate::fl;
 
 /// Byte counts as MB below a gibibyte, GB above it.
 pub fn bytes(bytes: u64) -> String {
     let mb = bytes as f64 / (1024.0 * 1024.0);
+
+    // Bound to locals because Fluent arguments borrow rather than own.
     if mb >= 1024.0 {
-        format!("{:.2} GB", mb / 1024.0)
+        let value = format!("{:.2}", mb / 1024.0);
+        fl!("unit-gigabytes", value = value.as_str())
     } else {
-        format!("{mb:.0} MB")
+        let value = format!("{mb:.0}");
+        fl!("unit-megabytes", value = value.as_str())
     }
 }
 
@@ -19,19 +28,27 @@ pub fn gb(bytes: u64) -> f64 {
 /// Throughput given in KB/s, promoted to MB/s once it gets large.
 pub fn rate(kbs: f32) -> String {
     if kbs >= 1024.0 {
-        format!("{:.1} MB/s", kbs / 1024.0)
+        let value = format!("{:.1}", kbs / 1024.0);
+        fl!("unit-mb-per-second", value = value.as_str())
     } else {
-        format!("{kbs:.1} KB/s")
+        let value = format!("{kbs:.1}");
+        fl!("unit-kb-per-second", value = value.as_str())
     }
+}
+
+/// A percentage, e.g. `42%`.
+pub fn percent(value: f32, decimals: usize) -> String {
+    let value = format!("{value:.*}", decimals);
+    fl!("unit-percent", value = value.as_str())
 }
 
 /// Uptime at the coarsest granularity that still says something useful.
 pub fn uptime(seconds: u64) -> String {
     let (days, hours, minutes) = (seconds / 86400, (seconds % 86400) / 3600, (seconds % 3600) / 60);
     match (days, hours) {
-        (0, 0) => format!("{minutes} minutes"),
-        (0, _) => format!("{hours} hours, {minutes} minutes"),
-        _ => format!("{days}d, {hours}h, {minutes}m"),
+        (0, 0) => fl!("uptime-minutes", minutes = minutes),
+        (0, _) => fl!("uptime-hours", hours = hours, minutes = minutes),
+        _ => fl!("uptime-days", days = days, hours = hours, minutes = minutes),
     }
 }
 
