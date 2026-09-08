@@ -52,22 +52,22 @@
     <keyword>COSMIC</keyword>
   </keywords>
 
-  <url type="homepage">https://github.com/Kai-J-G/Cosmic-Hardware-Monitor</url>
-  <url type="bugtracker">https://github.com/Kai-J-G/Cosmic-Hardware-Monitor/issues</url>
-  <url type="vcs-browser">https://github.com/Kai-J-G/Cosmic-Hardware-Monitor</url>
+  <url type="homepage">https://github.com/Kai-J-G/CosmicHardwareMonitor</url>
+  <url type="bugtracker">https://github.com/Kai-J-G/CosmicHardwareMonitor/issues</url>
+  <url type="vcs-browser">https://github.com/Kai-J-G/CosmicHardwareMonitor</url>
 
   <screenshots>
     <screenshot type="default">
       <caption>The overview, with dials for CPU, GPU, memory and disk</caption>
-      <image>https://raw.githubusercontent.com/Kai-J-G/Cosmic-Hardware-Monitor/main/data/screenshots/overview.png</image>
+      <image>https://raw.githubusercontent.com/Kai-J-G/CosmicHardwareMonitor/main/data/screenshots/overview.png</image>
     </screenshot>
     <screenshot>
       <caption>Per-core CPU temperatures, load and clocks</caption>
-      <image>https://raw.githubusercontent.com/Kai-J-G/Cosmic-Hardware-Monitor/main/data/screenshots/cpu.png</image>
+      <image>https://raw.githubusercontent.com/Kai-J-G/CosmicHardwareMonitor/main/data/screenshots/cpu.png</image>
     </screenshot>
     <screenshot>
       <caption>GPU utilisation, temperatures and VRAM</caption>
-      <image>https://raw.githubusercontent.com/Kai-J-G/Cosmic-Hardware-Monitor/main/data/screenshots/gpu.png</image>
+      <image>https://raw.githubusercontent.com/Kai-J-G/CosmicHardwareMonitor/main/data/screenshots/gpu.png</image>
     </screenshot>
   </screenshots>
 

@@ -132,11 +132,11 @@ cargo install just
 ### 2. Clone and install
 
 ```bash
-git clone https://github.com/Kai-J-G/Cosmic-Hardware-Monitor.git
+git clone https://github.com/Kai-J-G/CosmicHardwareMonitor.git
 ```
 
 ```bash
-cd Cosmic-Hardware-Monitor && just install
+cd CosmicHardwareMonitor && just install
 ```
 
 That's it. `just install` compiles an optimised release build and installs it

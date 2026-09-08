@@ -3,30 +3,25 @@
   "runtime": "org.freedesktop.Platform",
   "runtime-version": "25.08",
   "sdk": "org.freedesktop.Sdk",
-  "sdk-extensions": ["org.freedesktop.Sdk.Extension.rust-stable"],
+  "sdk-extensions": [
+    "org.freedesktop.Sdk.Extension.rust-stable"
+  ],
   "command": "cosmic-ext-hardware-monitor",
-
   "finish-args": [
     "--socket=wayland",
-
-    "--filesystem=xdg-config/cosmic:rw",
     "--talk-name=com.system76.CosmicSettingsDaemon",
     "--talk-name=com.system76.CosmicSettingsDaemon.*",
-
     "--filesystem=/sys/class/hwmon:ro",
     "--filesystem=/sys/class/drm:ro",
     "--filesystem=/sys/devices:ro",
-
     "--device=all"
   ],
-
   "build-options": {
     "append-path": "/usr/lib/sdk/rust-stable/bin",
     "env": {
       "CARGO_HOME": "/run/build/cosmic-ext-hardware-monitor/cargo"
     }
   },
-
   "modules": [
     {
       "name": "cosmic-ext-hardware-monitor",
@@ -43,8 +38,9 @@
       "sources": [
         {
           "type": "git",
-          "url": "https://github.com/Kai-J-G/Cosmic-Hardware-Monitor.git",
-          "tag": "v1.0.0"
+          "url": "https://github.com/Kai-J-G/CosmicHardwareMonitor.git",
+          "tag": "v1.0.0",
+          "commit": "95281adcbed4957d3d94ef83f29fc602eada6473"
         },
         "cargo-sources.json"
       ]
