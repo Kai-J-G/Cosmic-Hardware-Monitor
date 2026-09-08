@@ -6,12 +6,19 @@ use cosmic::Element;
 
 use crate::app::Message;
 use crate::hardware::types::{PartitionInfo, StorageMetrics};
-use crate::views::{fmt, nav_row, label_and_value, style, EMERALD};
+use crate::views::{fmt, nav_row, style, EMERALD};
 
 const CYAN: Color = Color::from_rgb(0.0, 0.75, 1.0);
 
-/// Height of the partition list before it starts scrolling.
-const LIST_HEIGHT: f32 = 260.0;
+/// How many partitions the list will grow to fit before it starts scrolling.
+///
+/// The popup sizes itself to its content, so the usual handful of mounts all
+/// show at once with no scrollbar. Past this many the list would grow taller
+/// than a screen, so it scrolls instead.
+const MAX_UNSCROLLED_PARTITIONS: usize = 12;
+
+/// Height the list is capped at once it does scroll.
+const SCROLLED_LIST_HEIGHT: f32 = 480.0;
 
 pub fn view<'a>(metrics: &'a StorageMetrics, is_dark: bool) -> Element<'a, Message> {
     let sp = cosmic::theme::spacing();
@@ -41,11 +48,18 @@ pub fn view<'a>(metrics: &'a StorageMetrics, is_dark: bool) -> Element<'a, Messa
         list.into()
     };
 
+    // Only impose a scrollbar on the machines that genuinely need one.
+    let partitions: Element<'a, Message> = if metrics.partitions.len() > MAX_UNSCROLLED_PARTITIONS {
+        scrollable(partitions).height(Length::Fixed(SCROLLED_LIST_HEIGHT)).width(Length::Fill).into()
+    } else {
+        partitions
+    };
+
     column![
         nav_row("Storage & Partition Metrics"),
         speeds,
         text::title3("Mounted Partitions & Free Space").size(13),
-        scrollable(partitions).height(Length::Fixed(LIST_HEIGHT)).width(Length::Fill),
+        partitions,
     ]
     .spacing(sp.space_m)
     .width(Length::Fill)
@@ -76,38 +90,38 @@ fn speed_card<'a>(
 }
 
 /// One mount point: where it is, how full it is, and how much is left.
+///
+/// Deliberately two rows rather than three. The list has to fit however many
+/// disks the machine has without scrolling, so every row costs height across
+/// the whole list.
 fn partition_card<'a>(part: &'a PartitionInfo, is_dark: bool) -> Element<'a, Message> {
     let sp = cosmic::theme::spacing();
 
     let heading = row![
-        icon::from_name("drive-harddisk-symbolic").size(18),
-        text::body(format!("Mount: {}", part.mount)).size(13),
-        container(text::caption(&part.filesystem).size(10))
-            .padding([2, 6])
+        icon::from_name("drive-harddisk-symbolic").size(14),
+        text::body(&part.mount).size(12),
+        container(text::caption(&part.filesystem).size(9))
+            .padding([1, 5])
             .class(style::chip(is_dark)),
         cosmic::widget::Space::new().width(Length::Fill),
-        text::title3(format!("{:.1}% used", part.percent_used)).size(13),
-    ]
-    .spacing(sp.space_xs)
-    .align_y(Alignment::Center)
-    .width(Length::Fill);
-
-    let footer = label_and_value(
-        text::body(format!("Free: {}", fmt::bytes(part.free_bytes))).size(11),
         text::caption(format!(
-            "{} used of {}",
-            fmt::bytes(part.used_bytes),
+            "{:.0}%  ·  {} free of {}",
+            part.percent_used,
+            fmt::bytes(part.free_bytes),
             fmt::bytes(part.total_bytes)
         ))
         .size(11),
-    );
+    ]
+    .spacing(sp.space_xxs)
+    .align_y(Alignment::Center)
+    .width(Length::Fill);
 
     container(
-        column![heading, determinate_linear((part.percent_used / 100.0).clamp(0.0, 1.0)), footer]
-            .spacing(5)
+        column![heading, determinate_linear((part.percent_used / 100.0).clamp(0.0, 1.0))]
+            .spacing(4)
             .width(Length::Fill),
     )
-    .padding([sp.space_s, sp.space_m])
+    .padding([sp.space_xxs, sp.space_s])
     .width(Length::Fill)
     .class(style::card(is_dark))
     .into()
