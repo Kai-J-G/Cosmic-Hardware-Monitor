@@ -1,7 +1,15 @@
 //! The popup UI: a header, then whichever tab is active.
 //!
-//! Views are pure functions of a [`HardwareSnapshot`] plus the small amount of
-//! UI state the app holds; they own no state of their own.
+//! Every view is a pure function of the applet's state: it borrows the current
+//! [`HardwareSnapshot`](crate::hardware::types::HardwareSnapshot) and the bit
+//! of UI state it needs, and returns widgets. Views hold no state themselves,
+//! so a click produces a [`Message`] for [`crate::app`] to act on rather than
+//! being handled here.
+//!
+//! Shared pieces live in this file — [`nav_row`], [`stat_card`], [`graph_card`]
+//! and [`label_and_value`] — with colours in [`style`] and number formatting in
+//! [`fmt`]. Reach for those before writing a one-off, so the tabs keep looking
+//! like each other.
 
 pub mod circular_gauge;
 pub mod cores;
@@ -131,7 +139,10 @@ pub fn stat_card<'a>(
         .width(Length::FillPortion(1))
         .align_x(Alignment::Center)
         .align_y(Alignment::Center)
-        .class(style::maybe_accent_card(accent, is_dark))
+        .class(match accent {
+            Some(accent) => style::accent_card(accent, is_dark),
+            None => style::card(is_dark),
+        })
         .into()
 }
 
@@ -152,8 +163,11 @@ pub fn graph_card<'a>(
         .into()
 }
 
-/// A label on the left and its value pushed to the right edge.
-pub fn spread_row<'a>(
+/// A row with the label on the left and its value against the right edge.
+///
+/// The flexible space between them is what pushes the two apart, so the row
+/// stays aligned however wide the popup is.
+pub fn label_and_value<'a>(
     label: impl Into<Element<'a, Message>>,
     value: impl Into<Element<'a, Message>>,
 ) -> Element<'a, Message> {

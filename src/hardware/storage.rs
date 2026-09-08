@@ -7,127 +7,179 @@ use std::mem::MaybeUninit;
 use super::sysfs::{self, Hwmon, RateMeter};
 use super::types::{PartitionInfo, StorageInfo, StorageMetrics};
 
-/// A disk sector is 512 bytes in `/proc/diskstats`, regardless of the
-/// hardware's real sector size.
+/// `/proc/diskstats` counts I/O in 512-byte sectors whatever the drive's real
+/// sector size, so this constant is fixed rather than hardware-dependent.
 const SECTOR_BYTES: u64 = 512;
 
-/// hwmon drivers that expose drive temperatures.
+/// `/proc/diskstats` columns: the device name, then the sector counts.
+const DISKSTATS_DEVICE_NAME: usize = 2;
+const DISKSTATS_SECTORS_READ: usize = 5;
+const DISKSTATS_SECTORS_WRITTEN: usize = 9;
+
+/// hwmon drivers that report drive temperatures. `nvme` covers NVMe SSDs;
+/// `drivetemp` covers SATA drives, and is not loaded by default on all
+/// distributions.
 const DRIVE_CHIPS: [&str; 2] = ["nvme", "drivetemp"];
 
-/// Mount points that duplicate or clutter the partition list.
+/// Mount points not worth listing: container and package-manager mounts that
+/// duplicate a filesystem already shown, and system directories that are
+/// usually just the root filesystem again.
 const IGNORED_MOUNTS: [&str; 4] = ["/var/", "/snap", "/root", "/srv"];
 
+/// Holds the disk counters between refreshes so throughput can be measured.
 #[derive(Default)]
 pub struct StorageCollector {
-    io: RateMeter,
+    reads: RateMeter,
+    writes: RateMeter,
 }
 
 impl StorageCollector {
     pub fn collect(&mut self, chips: &[Hwmon]) -> (Vec<StorageInfo>, StorageMetrics) {
-        let (sectors_read, sectors_written) = read_diskstats();
-        let (read_kbs, write_kbs) = self
-            .io
-            .sample(sectors_read * SECTOR_BYTES, sectors_written * SECTOR_BYTES);
+        let (sectors_read, sectors_written) = read_disk_totals();
 
-        let metrics = StorageMetrics { read_kbs, write_kbs, partitions: read_partitions() };
+        let metrics = StorageMetrics {
+            read_kbs: self.reads.kb_per_second(sectors_read * SECTOR_BYTES),
+            write_kbs: self.writes.kb_per_second(sectors_written * SECTOR_BYTES),
+            partitions: read_partitions(),
+        };
+
         (read_drive_temps(chips), metrics)
     }
 }
 
-/// Reads each drive's composite temperature (`temp1_input`).
+/// Reads each drive's composite temperature.
 fn read_drive_temps(chips: &[Hwmon]) -> Vec<StorageInfo> {
-    chips
-        .iter()
-        .filter(|c| DRIVE_CHIPS.iter().any(|d| c.name.starts_with(d)))
-        .filter_map(|chip| Some(StorageInfo { name: drive_model(chip), temp: chip.temp(1)? }))
-        .collect()
+    let mut drives = Vec::new();
+
+    for chip in chips {
+        let is_drive = DRIVE_CHIPS.iter().any(|driver| chip.name.starts_with(driver));
+        if !is_drive {
+            continue;
+        }
+
+        // A drive with no readable temperature is not worth a row.
+        if let Some(temp) = chip.temp(1) {
+            drives.push(StorageInfo { name: drive_model(chip), temp });
+        }
+    }
+
+    drives
 }
 
-/// Prefers the drive's advertised model over the bare driver name.
+/// Names a drive by its advertised model, falling back to the driver name.
 fn drive_model(chip: &Hwmon) -> String {
-    sysfs::read(chip.dir.join("device/model"))
-        .filter(|m| !m.is_empty())
-        .map(|model| format!("NVMe {model}"))
-        .unwrap_or_else(|| format!("Storage ({})", chip.name))
+    match sysfs::read(chip.dir.join("device/model")) {
+        Some(model) if !model.is_empty() => format!("NVMe {model}"),
+        _ => format!("Storage ({})", chip.name),
+    }
 }
 
-/// Totals read and written sectors across whole disks.
+/// Totals sectors read and written across whole disks.
 ///
-/// Partitions are skipped so their I/O is not counted twice on top of the
-/// parent disk's.
-fn read_diskstats() -> (u64, u64) {
-    let Some(content) = sysfs::read("/proc/diskstats") else {
+/// Partitions are skipped: the kernel counts their I/O against both the
+/// partition and its parent disk, so including them would double the figure.
+fn read_disk_totals() -> (u64, u64) {
+    let Some(contents) = sysfs::read("/proc/diskstats") else {
         return (0, 0);
     };
 
-    content
-        .lines()
-        .filter_map(|line| {
-            let fields: Vec<&str> = line.split_whitespace().collect();
-            let name = fields.get(2)?;
-            if !is_whole_disk(name) {
-                return None;
-            }
-            Some((fields.get(5)?.parse().ok()?, fields.get(9)?.parse().ok()?))
-        })
-        .fold((0u64, 0u64), |(r, w), (dr, dw): (u64, u64)| (r + dr, w + dw))
+    let mut sectors_read = 0;
+    let mut sectors_written = 0;
+
+    for line in contents.lines() {
+        let fields: Vec<&str> = line.split_whitespace().collect();
+
+        let Some(device) = fields.get(DISKSTATS_DEVICE_NAME) else {
+            continue;
+        };
+        if !is_whole_disk(device) {
+            continue;
+        }
+
+        sectors_read += parse_field(&fields, DISKSTATS_SECTORS_READ);
+        sectors_written += parse_field(&fields, DISKSTATS_SECTORS_WRITTEN);
+    }
+
+    (sectors_read, sectors_written)
 }
 
-/// `nvme0n1` and `sda` are disks; `nvme0n1p2` and `sda1` are partitions of one.
-fn is_whole_disk(name: &str) -> bool {
-    (name.starts_with("nvme") && !name.contains('p')) || (name.starts_with("sd") && name.len() == 3)
+/// Distinguishes a disk from one of its partitions.
+///
+/// `nvme0n1` and `sda` are whole disks; `nvme0n1p2` and `sda1` are partitions.
+fn is_whole_disk(device: &str) -> bool {
+    let nvme_disk = device.starts_with("nvme") && !device.contains('p');
+    // "sda" is a disk, "sda1" is not — hence the exact length.
+    let sata_disk = device.starts_with("sd") && device.len() == 3;
+
+    nvme_disk || sata_disk
 }
 
-/// Lists real, distinct mounted filesystems with their usage.
+fn parse_field(fields: &[&str], index: usize) -> u64 {
+    fields.get(index).and_then(|value| value.parse().ok()).unwrap_or(0)
+}
+
+/// Lists the mounted filesystems worth showing, root first.
 fn read_partitions() -> Vec<PartitionInfo> {
-    let Some(content) = sysfs::read("/proc/mounts") else {
+    let Some(contents) = sysfs::read("/proc/mounts") else {
         return Vec::new();
     };
 
-    let mut seen = HashSet::new();
-    let mut partitions: Vec<PartitionInfo> = content
-        .lines()
-        .filter_map(|line| {
-            let mut fields = line.split_whitespace();
-            let device = fields.next()?;
-            let mount = fields.next()?;
-            let filesystem = fields.next()?;
+    let mut partitions = Vec::new();
+    let mut seen_mounts = HashSet::new();
 
-            // Only block devices, and only the first mount of each path.
-            if !device.starts_with("/dev/")
-                || IGNORED_MOUNTS.iter().any(|i| mount.starts_with(i) || mount.contains(i))
-                || !seen.insert(mount.to_string())
-            {
-                return None;
-            }
+    // Each line is `device mount filesystem options ...`.
+    for line in contents.lines() {
+        let mut fields = line.split_whitespace();
+        let (Some(device), Some(mount), Some(filesystem)) =
+            (fields.next(), fields.next(), fields.next())
+        else {
+            continue;
+        };
 
-            let (total_bytes, free_bytes) = disk_usage(mount)?;
-            let used_bytes = total_bytes.saturating_sub(free_bytes);
-            Some(PartitionInfo {
-                mount: mount.to_string(),
-                filesystem: filesystem.to_string(),
-                total_bytes,
-                free_bytes,
-                used_bytes,
-                percent_used: ((used_bytes as f32 / total_bytes as f32) * 100.0).clamp(0.0, 100.0),
-            })
-        })
-        .collect();
+        // Anything not backed by a block device is a pseudo-filesystem.
+        if !device.starts_with("/dev/") {
+            continue;
+        }
+        if IGNORED_MOUNTS.iter().any(|ignored| mount.starts_with(ignored) || mount.contains(ignored))
+        {
+            continue;
+        }
+        // A filesystem can be mounted more than once; show it once.
+        if !seen_mounts.insert(mount.to_string()) {
+            continue;
+        }
 
-    // Root first, the rest alphabetically.
+        let Some((total_bytes, free_bytes)) = disk_usage(mount) else {
+            continue;
+        };
+        let used_bytes = total_bytes.saturating_sub(free_bytes);
+
+        partitions.push(PartitionInfo {
+            mount: mount.to_string(),
+            filesystem: filesystem.to_string(),
+            total_bytes,
+            free_bytes,
+            used_bytes,
+            percent_used: ((used_bytes as f32 / total_bytes as f32) * 100.0).clamp(0.0, 100.0),
+        });
+    }
+
+    // Root first, then the rest alphabetically. Comparing `mount != "/"` sorts
+    // false (root) ahead of true (everything else).
     partitions.sort_by(|a, b| (a.mount != "/", &a.mount).cmp(&(b.mount != "/", &b.mount)));
     partitions
 }
 
-/// Total and available bytes for a mount point, via `statvfs(3)`.
+/// Total and available bytes for a mount point.
 ///
-/// Returns `None` for pseudo-filesystems that report a zero-sized volume.
+/// Returns `None` for a filesystem reporting zero size, which is how
+/// pseudo-filesystems appear.
 fn disk_usage(mount: &str) -> Option<(u64, u64)> {
     let path = CString::new(mount).ok()?;
     let mut stat = MaybeUninit::<libc::statvfs>::uninit();
 
-    // SAFETY: `path` is a valid NUL-terminated string and `stat` is only read
-    // once the call reports success, which means the kernel initialised it.
+    // SAFETY: `path` is a valid NUL-terminated string, and `stat` is only read
+    // after statvfs reports success, which means the kernel filled it in.
     let stat = unsafe {
         if libc::statvfs(path.as_ptr(), stat.as_mut_ptr()) != 0 {
             return None;
@@ -135,10 +187,17 @@ fn disk_usage(mount: &str) -> Option<(u64, u64)> {
         stat.assume_init()
     };
 
+    // `f_frsize` is the real block size; `f_bsize` is a hint some filesystems
+    // set instead.
     let block_size = if stat.f_frsize > 0 { stat.f_frsize } else { stat.f_bsize } as u64;
     let total = stat.f_blocks as u64 * block_size;
-    // `f_bavail` excludes root-reserved blocks, so it matches what users can fill.
+    // `f_bavail` excludes root-reserved blocks, so it matches what a normal
+    // user can actually fill.
     let free = stat.f_bavail as u64 * block_size;
 
-    (total > 0).then_some((total, free))
+    if total == 0 {
+        return None;
+    }
+
+    Some((total, free))
 }

@@ -45,14 +45,6 @@ pub fn accent_card(accent: Color, is_dark: bool) -> theme::Container<'static> {
     surface(tint(fill), tint(edge), CARD_RADIUS)
 }
 
-/// `card` or `accent_card` depending on whether an accent was supplied.
-pub fn maybe_accent_card(accent: Option<Color>, is_dark: bool) -> theme::Container<'static> {
-    match accent {
-        Some(accent) => accent_card(accent, is_dark),
-        None => card(is_dark),
-    }
-}
-
 /// A small pill behind a short label, such as a filesystem type.
 pub fn chip(is_dark: bool) -> theme::Container<'static> {
     surface(overlay(is_dark, 0.06), Color::TRANSPARENT, 6.0)

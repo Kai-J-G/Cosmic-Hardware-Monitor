@@ -1,4 +1,12 @@
-//! Plain data the collectors produce and the views render.
+//! The data the collectors produce and the views render.
+//!
+//! These are plain structs with no behaviour beyond a few conversions. Adding
+//! a reading to the UI generally means adding a field here, filling it in the
+//! matching collector, and displaying it in the matching view.
+//!
+//! Units are named in every field, because the kernel's own units vary: bytes
+//! here, kibibytes there, millidegrees elsewhere. Everything below is already
+//! converted into the unit its name states.
 
 /// Unit the user has chosen for every temperature in the UI.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -31,13 +39,21 @@ impl TemperatureUnit {
     }
 }
 
-/// Coarse thermal band a reading falls into, used to colour the UI.
+/// The band a temperature falls into, which decides the colour the UI shows.
+///
+/// The thresholds suit a desktop CPU or GPU under load; drives and memory run
+/// far cooler and so sit permanently in the lower bands.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ThermalStatus {
+    /// Below 45°C — idle or lightly loaded.
     Cool,
+    /// 45–64°C — a normal working temperature.
     Optimal,
+    /// 65–74°C — sustained load.
     Normal,
+    /// 75–84°C — hot, but within spec for most parts.
     Warm,
+    /// 85°C and above — at or near thermal throttling.
     Critical,
 }
 
@@ -64,61 +80,95 @@ impl ThermalStatus {
     }
 }
 
+/// One logical CPU.
 #[derive(Debug, Clone)]
 pub struct CpuCoreInfo {
+    /// The sensor's own name where there is one per core (`Core 3`, `Tccd1`),
+    /// otherwise a generated `Core N`.
     pub label: String,
+    /// Degrees Celsius. Cores sharing a die sensor all report the same value.
     pub temp: f32,
+    /// 0–100.
     pub usage_percent: f32,
+    /// Current clock in MHz, or `None` where no scaling driver exists.
     pub freq_mhz: Option<u32>,
 }
 
 #[derive(Debug, Clone)]
 pub struct CpuInfo {
+    /// Marketing name, e.g. `AMD Ryzen 7 7800X3D 8-Core Processor`.
     pub model: String,
+    /// Whole-package temperature in Celsius — the headline CPU reading.
     pub package_temp: f32,
+    /// One entry per online logical CPU.
     pub cores: Vec<CpuCoreInfo>,
+    /// 0–100, across all cores. Equal to `100 - idle_usage`.
     pub overall_usage: f32,
+    /// 0–100, time spent running user programs.
     pub user_usage: f32,
+    /// 0–100, time spent in the kernel and servicing interrupts.
     pub sys_usage: f32,
+    /// 0–100, time spent idle or waiting on I/O.
     pub idle_usage: f32,
+    /// Mean clock across cores reporting one, in MHz; 0 if none do.
     pub avg_freq_mhz: u32,
+    /// Package draw in watts, or `None` where the RAPL counter is unreadable.
     pub power_watts: Option<f32>,
     pub num_processes: usize,
     pub num_threads: usize,
+    /// Open file descriptors system-wide.
     pub num_handles: usize,
 }
 
+/// Fields are `Option` wherever a vendor may not report them: Intel
+/// integrated graphics, for instance, expose only a temperature.
 #[derive(Debug, Clone)]
 pub struct GpuInfo {
     pub name: String,
+    /// Board temperature in Celsius, the figure vendors quote.
     pub edge_temp: f32,
+    /// Hotspot temperature in Celsius — always the hotter of the two.
     pub junction_temp: Option<f32>,
+    /// 0–100.
     pub utilization_percent: u32,
+    /// Shader clock in MHz.
     pub clock_mhz: Option<u32>,
+    /// Dedicated video memory. Zero on integrated graphics, which use system
+    /// memory instead.
     pub vram_used_bytes: u64,
     pub vram_total_bytes: u64,
     pub power_draw_watts: Option<f32>,
 }
 
-/// Temperature of one physical drive.
+/// The temperature of one physical drive.
 #[derive(Debug, Clone)]
 pub struct StorageInfo {
+    /// The drive's model where the kernel knows it, e.g. `NVMe Samsung SSD
+    /// 990 EVO 2TB`.
     pub name: String,
+    /// Composite temperature in Celsius.
     pub temp: f32,
 }
 
+/// One mounted filesystem.
 #[derive(Debug, Clone)]
 pub struct PartitionInfo {
+    /// Where it is mounted, e.g. `/` or `/home`.
     pub mount: String,
+    /// Its type, e.g. `btrfs`, `ext4`, `vfat`.
     pub filesystem: String,
     pub total_bytes: u64,
+    /// Space a normal user can still fill; excludes root-reserved blocks, so
+    /// `free_bytes + used_bytes` can be slightly less than `total_bytes`.
     pub free_bytes: u64,
     pub used_bytes: u64,
+    /// 0–100.
     pub percent_used: f32,
 }
 
 #[derive(Debug, Clone, Default)]
 pub struct StorageMetrics {
+    /// Throughput across all whole disks, in KB/s.
     pub read_kbs: f32,
     pub write_kbs: f32,
     /// Mounted partitions, root first.
@@ -135,25 +185,38 @@ impl StorageMetrics {
 #[derive(Debug, Clone, Default)]
 pub struct MemoryMetrics {
     pub total_bytes: u64,
+    /// Total minus available, which is what people mean by "in use".
     pub used_bytes: u64,
+    /// What a new program could claim, counting reclaimable cache.
     pub available_bytes: u64,
+    /// Memory programs have asked for, which can exceed the total because
+    /// Linux hands out more than it has on the assumption it won't all be
+    /// touched.
     pub committed_bytes: u64,
+    /// Page cache and block buffers combined — in use, but reclaimable.
     pub cached_bytes: u64,
     pub swap_total_bytes: u64,
     pub swap_used_bytes: u64,
     pub swap_avail_bytes: u64,
+    /// Physical memory in use, 0–100.
     pub percent: f32,
 }
 
 #[derive(Debug, Clone, Default)]
 pub struct SystemInfo {
     pub uptime_seconds: u64,
+    /// Load averaged over 1, 5 and 15 minutes. This counts processes waiting
+    /// to run, so it is not a percentage and can exceed the number of cores.
     pub load_avg: [f32; 3],
+    /// Throughput across all interfaces but loopback, in KB/s.
     pub net_rx_kbs: f32,
     pub net_tx_kbs: f32,
 }
 
 /// One complete reading of the machine, rebuilt on every refresh tick.
+///
+/// The views render this and nothing else, which is what keeps them free of
+/// their own state.
 #[derive(Debug, Clone)]
 pub struct HardwareSnapshot {
     pub cpu: CpuInfo,

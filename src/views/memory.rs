@@ -6,7 +6,7 @@ use cosmic::Element;
 
 use crate::app::Message;
 use crate::hardware::types::MemoryMetrics;
-use crate::views::{fmt, graph_card, nav_row, spread_row, stat_card, style, EMERALD};
+use crate::views::{fmt, graph_card, nav_row, label_and_value, stat_card, style, EMERALD};
 
 pub fn view<'a>(
     memory: &'a MemoryMetrics,
@@ -53,7 +53,7 @@ fn headline<'a>(memory: &'a MemoryMetrics, is_dark: bool) -> Element<'a, Message
 /// Overall physical memory pressure, as a bar with its own summary line.
 fn usage_bar<'a>(memory: &'a MemoryMetrics) -> Element<'a, Message> {
     column![
-        spread_row(
+        label_and_value(
             text::title3(format!("Physical Memory: {:.1}%", memory.percent)).size(13),
             text::caption(format!(
                 "{} in use / {} total",

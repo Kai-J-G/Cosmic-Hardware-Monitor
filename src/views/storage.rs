@@ -6,7 +6,7 @@ use cosmic::Element;
 
 use crate::app::Message;
 use crate::hardware::types::{PartitionInfo, StorageMetrics};
-use crate::views::{fmt, nav_row, spread_row, style, EMERALD};
+use crate::views::{fmt, nav_row, label_and_value, style, EMERALD};
 
 const CYAN: Color = Color::from_rgb(0.0, 0.75, 1.0);
 
@@ -26,13 +26,11 @@ pub fn view<'a>(metrics: &'a StorageMetrics, is_dark: bool) -> Element<'a, Messa
     let partitions: Element<'a, Message> = if metrics.partitions.is_empty() {
         text::caption("No mounted partitions detected.").size(12).into()
     } else {
-        metrics
-            .partitions
-            .iter()
-            .fold(column![].spacing(sp.space_xs).width(Length::Fill), |list, part| {
-                list.push(partition_card(part, is_dark))
-            })
-            .into()
+        let mut list = column![].spacing(sp.space_xs).width(Length::Fill);
+        for partition in &metrics.partitions {
+            list = list.push(partition_card(partition, is_dark));
+        }
+        list.into()
     };
 
     column![
@@ -86,7 +84,7 @@ fn partition_card<'a>(part: &'a PartitionInfo, is_dark: bool) -> Element<'a, Mes
     .align_y(Alignment::Center)
     .width(Length::Fill);
 
-    let footer = spread_row(
+    let footer = label_and_value(
         text::body(format!("Free: {}", fmt::bytes(part.free_bytes))).size(11),
         text::caption(format!(
             "{} used of {}",

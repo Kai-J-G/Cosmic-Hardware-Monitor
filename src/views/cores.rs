@@ -104,23 +104,39 @@ fn cores_toggle<'a>(count: usize, expanded: bool, is_dark: bool) -> Element<'a, 
 }
 
 /// The cores split across two balanced rows.
+///
+/// A single row of sixteen cores would leave each card too narrow to read, so
+/// the list is halved. An odd count puts the extra card on the top row.
 fn cores_grid<'a>(
     cores: &'a [CpuCoreInfo],
     unit: TemperatureUnit,
     is_dark: bool,
 ) -> Element<'a, Message> {
-    let build = |chunk: &'a [CpuCoreInfo]| {
-        chunk.iter().fold(row![].spacing(8).width(Length::Fill), |acc, core| {
-            acc.push(core_card(core, unit, is_dark))
-        })
-    };
+    let halfway = cores.len().div_ceil(2);
+    let (top, bottom) = cores.split_at(halfway);
 
-    let mid = cores.len().div_ceil(2);
-    column![build(&cores[..mid]), build(&cores[mid..])]
-        .spacing(8)
-        .align_x(Alignment::Center)
-        .width(Length::Fill)
-        .into()
+    column![
+        core_row(top, unit, is_dark),
+        core_row(bottom, unit, is_dark),
+    ]
+    .spacing(8)
+    .align_x(Alignment::Center)
+    .width(Length::Fill)
+    .into()
+}
+
+fn core_row<'a>(
+    cores: &'a [CpuCoreInfo],
+    unit: TemperatureUnit,
+    is_dark: bool,
+) -> Element<'a, Message> {
+    let mut cards = row![].spacing(8).width(Length::Fill);
+
+    for core in cores {
+        cards = cards.push(core_card(core, unit, is_dark));
+    }
+
+    cards.into()
 }
 
 /// A single core: a thermal bar with its temperature, load and clock.

@@ -3,105 +3,156 @@
 use super::sysfs::{self, RateMeter};
 use super::types::{MemoryMetrics, SystemInfo};
 
+/// `/proc/net/dev` gives each interface 16 counters. We want the first
+/// (received bytes) and the ninth (transmitted bytes).
+const NET_RECEIVED_BYTES: usize = 0;
+const NET_TRANSMITTED_BYTES: usize = 8;
+
+/// Holds the network counters between refreshes so throughput can be measured.
 #[derive(Default)]
 pub struct SystemCollector {
-    net: RateMeter,
+    received: RateMeter,
+    transmitted: RateMeter,
 }
 
 impl SystemCollector {
     pub fn collect(&mut self) -> (SystemInfo, MemoryMetrics) {
-        let (rx, tx) = read_net_bytes();
-        let (net_rx_kbs, net_tx_kbs) = self.net.sample(rx, tx);
+        let (received_bytes, transmitted_bytes) = read_network_totals();
 
         let info = SystemInfo {
             uptime_seconds: read_uptime(),
-            load_avg: read_load_avg(),
-            net_rx_kbs,
-            net_tx_kbs,
+            load_avg: read_load_average(),
+            net_rx_kbs: self.received.kb_per_second(received_bytes),
+            net_tx_kbs: self.transmitted.kb_per_second(transmitted_bytes),
         };
 
         (info, read_memory())
     }
 }
 
+/// Seconds since boot, from the first field of `/proc/uptime`.
 fn read_uptime() -> u64 {
-    sysfs::read("/proc/uptime")
-        .and_then(|c| c.split_whitespace().next()?.parse::<f64>().ok())
-        .unwrap_or(0.0) as u64
+    let Some(contents) = sysfs::read("/proc/uptime") else {
+        return 0;
+    };
+    let Some(seconds) = contents.split_whitespace().next() else {
+        return 0;
+    };
+
+    // The file stores a fractional value, e.g. "16711.42 128033.79".
+    seconds.parse::<f64>().unwrap_or(0.0) as u64
 }
 
-/// The 1, 5 and 15 minute load averages.
-fn read_load_avg() -> [f32; 3] {
-    let mut loads = [0.0; 3];
-    if let Some(content) = sysfs::read("/proc/loadavg") {
-        for (slot, field) in loads.iter_mut().zip(content.split_whitespace()) {
-            *slot = field.parse().unwrap_or(0.0);
+/// The 1, 5 and 15 minute load averages, the first three fields of
+/// `/proc/loadavg`.
+fn read_load_average() -> [f32; 3] {
+    let mut averages = [0.0; 3];
+
+    if let Some(contents) = sysfs::read("/proc/loadavg") {
+        for (average, field) in averages.iter_mut().zip(contents.split_whitespace()) {
+            *average = field.parse().unwrap_or(0.0);
         }
     }
-    loads
+
+    averages
 }
 
-/// Sums received and transmitted bytes across every interface but loopback.
-fn read_net_bytes() -> (u64, u64) {
-    let Some(content) = sysfs::read("/proc/net/dev") else {
+/// Totals bytes received and transmitted across every interface but loopback.
+///
+/// Each line of `/proc/net/dev` looks like:
+///
+/// ```text
+///   enp5s0: 1234567  8901    0    0    0     0          0         0  7654321 ...
+///           ^ received bytes                                         ^ transmitted bytes
+/// ```
+fn read_network_totals() -> (u64, u64) {
+    let Some(contents) = sysfs::read("/proc/net/dev") else {
         return (0, 0);
     };
 
-    content
-        .lines()
-        // Two header rows, then `iface: rx_bytes ... tx_bytes ...` per device.
-        .skip(2)
-        .filter_map(|line| {
-            let (iface, counters) = line.split_once(':')?;
-            if iface.trim() == "lo" {
-                return None;
-            }
-            let fields: Vec<&str> = counters.split_whitespace().collect();
-            Some((fields.first()?.parse().ok()?, fields.get(8)?.parse().ok()?))
-        })
-        .fold((0u64, 0u64), |(rx, tx), (drx, dtx): (u64, u64)| (rx + drx, tx + dtx))
+    let mut received = 0;
+    let mut transmitted = 0;
+
+    // The first two lines are column headings.
+    for line in contents.lines().skip(2) {
+        let Some((interface, counters)) = line.split_once(':') else {
+            continue;
+        };
+
+        // Loopback traffic never leaves the machine, so it isn't throughput.
+        if interface.trim() == "lo" {
+            continue;
+        }
+
+        let counters: Vec<&str> = counters.split_whitespace().collect();
+        received += parse_counter(&counters, NET_RECEIVED_BYTES);
+        transmitted += parse_counter(&counters, NET_TRANSMITTED_BYTES);
+    }
+
+    (received, transmitted)
 }
 
-/// Parses the handful of `/proc/meminfo` fields the UI shows.
+fn parse_counter(counters: &[&str], index: usize) -> u64 {
+    counters.get(index).and_then(|value| value.parse().ok()).unwrap_or(0)
+}
+
+/// Reads the `/proc/meminfo` fields the UI shows.
 ///
-/// Every value there is in kibibytes.
+/// The file is one `Key: value kB` per line, of which we want seven. Every
+/// value is in kibibytes.
 fn read_memory() -> MemoryMetrics {
-    let Some(content) = sysfs::read("/proc/meminfo") else {
+    let Some(contents) = sysfs::read("/proc/meminfo") else {
         return MemoryMetrics::default();
     };
 
-    let mut fields = [
-        ("MemTotal:", 0u64),
-        ("MemAvailable:", 0),
-        ("Committed_AS:", 0),
-        ("Cached:", 0),
-        ("Buffers:", 0),
-        ("SwapTotal:", 0),
-        ("SwapFree:", 0),
-    ];
+    let mut total = 0;
+    let mut available = 0;
+    let mut committed = 0;
+    let mut cached = 0;
+    let mut buffers = 0;
+    let mut swap_total = 0;
+    let mut swap_free = 0;
 
-    for line in content.lines() {
-        if let Some((_, value)) = fields.iter_mut().find(|(key, _)| line.starts_with(key)) {
-            *value = line.split_whitespace().nth(1).and_then(|v| v.parse().ok()).unwrap_or(0);
+    for line in contents.lines() {
+        let Some((key, value)) = line.split_once(':') else {
+            continue;
+        };
+
+        // Strip the trailing " kB" by taking just the number.
+        let kibibytes: u64 = match value.split_whitespace().next() {
+            Some(number) => number.parse().unwrap_or(0),
+            None => continue,
+        };
+
+        match key {
+            "MemTotal" => total = kibibytes,
+            // What is free for a new process to use, including reclaimable
+            // cache — a truer figure than MemFree.
+            "MemAvailable" => available = kibibytes,
+            "Committed_AS" => committed = kibibytes,
+            "Cached" => cached = kibibytes,
+            "Buffers" => buffers = kibibytes,
+            "SwapTotal" => swap_total = kibibytes,
+            "SwapFree" => swap_free = kibibytes,
+            _ => {}
         }
     }
 
-    let [total, available, committed, cached, buffers, swap_total, swap_free] =
-        fields.map(|(_, kib)| kib * 1024);
-
     let used = total.saturating_sub(available);
     let percent = if total > 0 { (used as f32 / total as f32) * 100.0 } else { 0.0 };
+    let to_bytes = |kibibytes: u64| kibibytes * 1024;
 
     MemoryMetrics {
-        total_bytes: total,
-        used_bytes: used,
-        available_bytes: available,
-        committed_bytes: committed,
-        // Page cache and block buffers are both reclaimable; the UI shows one figure.
-        cached_bytes: cached + buffers,
-        swap_total_bytes: swap_total,
-        swap_used_bytes: swap_total.saturating_sub(swap_free),
-        swap_avail_bytes: swap_free,
+        total_bytes: to_bytes(total),
+        used_bytes: to_bytes(used),
+        available_bytes: to_bytes(available),
+        committed_bytes: to_bytes(committed),
+        // Page cache and block buffers are both reclaimable, and the UI has
+        // room for one figure rather than two.
+        cached_bytes: to_bytes(cached + buffers),
+        swap_total_bytes: to_bytes(swap_total),
+        swap_used_bytes: to_bytes(swap_total.saturating_sub(swap_free)),
+        swap_avail_bytes: to_bytes(swap_free),
         percent: percent.clamp(0.0, 100.0),
     }
 }

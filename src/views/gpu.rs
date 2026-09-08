@@ -6,7 +6,7 @@ use cosmic::Element;
 
 use crate::app::Message;
 use crate::hardware::types::{GpuInfo, TemperatureUnit, ThermalStatus};
-use crate::views::{fmt, graph_card, nav_row, spread_row, stat_card, style};
+use crate::views::{fmt, graph_card, nav_row, label_and_value, stat_card, style};
 
 pub fn view<'a>(
     gpu: Option<&'a GpuInfo>,
@@ -83,7 +83,7 @@ fn vram<'a>(gpu: &'a GpuInfo, is_dark: bool) -> Element<'a, Message> {
     };
 
     let content = column![
-        spread_row(
+        label_and_value(
             text::title3(format!("VRAM Usage: {percent:.1}%")).size(13),
             text::caption(format!(
                 "{:.2} GB / {:.2} GB",

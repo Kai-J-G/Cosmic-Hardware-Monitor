@@ -365,17 +365,19 @@ Add `drivetemp` to `/etc/modules-load.d/` to make it stick across reboots.
 
 ```
 src/
-  main.rs            entry point
+  main.rs            entry point, and an overview of how the pieces connect
   app.rs             applet state, messages and the update loop
   config.rs          persisted settings (cosmic-config)
   hardware/          reads the machine
     sysfs.rs         sysfs/procfs helpers, hwmon enumeration, rate metering
-    cpu.rs           model, temperatures, utilisation, clocks, power
+    cpu/mod.rs       model, temperatures, clocks, power
+    cpu/usage.rs     utilisation, from the /proc/stat counters
     gpu.rs           AMD / NVIDIA / Intel telemetry
     storage.rs       drive temperatures, throughput, partitions
     system.rs        uptime, load, network, memory
     types.rs         the data the views render
   views/             renders the popup
+    mod.rs           popup shell, plus the widgets every tab shares
     panel.rs         panel button and popup surface
     style.rs         shared container styling
     fmt.rs           shared value formatting
@@ -384,9 +386,15 @@ src/
 data/                desktop entry, AppStream metainfo, icons
 ```
 
-All of `/sys/class/hwmon` is scanned once per refresh and shared between the
-CPU, GPU and storage collectors; hardware identity and other values that can't
-change while the applet runs are resolved once at start-up.
+`cargo doc --open` renders all of this with the module documentation, which is
+the quickest way in. [`src/main.rs`](src/main.rs) sketches the data flow and
+points at where to make common changes.
+
+Two things worth knowing before editing the collectors. All of
+`/sys/class/hwmon` is scanned once per refresh and lent to the CPU, GPU and
+storage collectors, so none of them walks it separately. And anything that
+cannot change while the applet runs — the CPU model, the GPU's vendor and name
+— is resolved once at start-up rather than re-read every tick.
 
 ---
 

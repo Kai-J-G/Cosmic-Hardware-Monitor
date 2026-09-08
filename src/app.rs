@@ -33,19 +33,27 @@ pub enum ActiveTab {
 }
 
 /// A rolling window of recent samples backing one sparkline.
+///
+/// Oldest samples fall off the front once it is full, so the chart always
+/// shows the most recent [`HISTORY_LEN`] readings.
 #[derive(Default)]
-pub struct History(Vec<f32>);
+pub struct History {
+    samples: Vec<f32>,
+}
 
 impl History {
     fn push(&mut self, value: f32) {
-        if self.0.len() >= HISTORY_LEN {
-            self.0.remove(0);
+        if self.samples.len() >= HISTORY_LEN {
+            // Shifting 120 floats a few times a minute costs nothing, and
+            // keeps the samples contiguous for the chart to borrow.
+            self.samples.remove(0);
         }
-        self.0.push(value);
+
+        self.samples.push(value);
     }
 
     pub fn as_slice(&self) -> &[f32] {
-        &self.0
+        &self.samples
     }
 }
 

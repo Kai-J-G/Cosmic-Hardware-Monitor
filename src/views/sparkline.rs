@@ -106,6 +106,8 @@ impl Sparkline<'_> {
             return None;
         }
 
+        // Floats have no total ordering, so `iter().min()` isn't available;
+        // folding with `f32::min` is the standard way round it.
         let min = self.history.iter().copied().fold(f32::MAX, f32::min);
         let max = self.history.iter().copied().fold(f32::MIN, f32::max);
         let padding = (max - min).max(MIN_SPAN) * PADDING;

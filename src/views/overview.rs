@@ -7,7 +7,7 @@ use cosmic::Element;
 use crate::app::{ActiveTab, Message};
 use crate::hardware::types::{HardwareSnapshot, TemperatureUnit, ThermalStatus};
 use crate::views::circular_gauge::CircularGauge;
-use crate::views::{fmt, spread_row, style, EMERALD};
+use crate::views::{fmt, label_and_value, style, EMERALD};
 
 const DIAL_SIZE: f32 = 66.0;
 
@@ -24,12 +24,9 @@ pub fn view<'a>(
     } else {
         // Collapsed, the network rates are the one thing worth keeping visible.
         centered(
-            column![
-                text::caption("Network").size(11),
-                net_rates(snapshot, 11, "↑ {}", "{} ↓"),
-            ]
-            .spacing(2)
-            .align_x(Alignment::Center),
+            column![text::caption("Network").size(11), net_rates(snapshot, NetLabels::Compact)]
+                .spacing(2)
+                .align_x(Alignment::Center),
         )
     };
 
@@ -112,7 +109,7 @@ fn details<'a>(
         style::divider(is_dark),
         storage_section(snapshot, unit),
         style::divider(is_dark),
-        spread_row(
+        label_and_value(
             text("Uptime ›").size(12),
             text(fmt::uptime(snapshot.system.uptime_seconds)).size(12),
         ),
@@ -132,26 +129,37 @@ fn network_section<'a>(snapshot: &'a HardwareSnapshot) -> Element<'a, Message> {
             .spacing(6)
             .align_y(Alignment::Center)
         ),
-        centered(net_rates(snapshot, 12, "Upload: ↑ {}", "Download: {} ↓")),
+        centered(net_rates(snapshot, NetLabels::Descriptive)),
     ]
     .spacing(4)
     .width(Length::Fill)
     .into()
 }
 
+/// How much room the network rates have to explain themselves.
+enum NetLabels {
+    /// Arrows only, for the collapsed overview.
+    Compact,
+    /// Spelled out, for the expanded section that has the width for it.
+    Descriptive,
+}
+
 /// Upload and download rates either side of a status dot.
-fn net_rates<'a>(
-    snapshot: &'a HardwareSnapshot,
-    size: u16,
-    up: &str,
-    down: &str,
-) -> Element<'a, Message> {
-    let format = |template: &str, kbs: f32| template.replace("{}", &fmt::rate(kbs));
+fn net_rates<'a>(snapshot: &'a HardwareSnapshot, labels: NetLabels) -> Element<'a, Message> {
+    let upload = fmt::rate(snapshot.system.net_tx_kbs);
+    let download = fmt::rate(snapshot.system.net_rx_kbs);
+
+    let (up, down, size) = match labels {
+        NetLabels::Compact => (format!("↑ {upload}"), format!("{download} ↓"), 11),
+        NetLabels::Descriptive => {
+            (format!("Upload: ↑ {upload}"), format!("Download: {download} ↓"), 12)
+        }
+    };
 
     row![
-        text(format(up, snapshot.system.net_tx_kbs)).size(size),
+        text(up).size(size),
         style::swatch(EMERALD, 8.0, 4.0),
-        text(format(down, snapshot.system.net_rx_kbs)).size(size),
+        text(down).size(size),
     ]
     .spacing(12)
     .align_y(Alignment::Center)
@@ -167,7 +175,7 @@ fn cpu_usage_section<'a>(snapshot: &'a HardwareSnapshot, is_dark: bool) -> Eleme
     };
 
     let entry = |color: Color, label: &'a str, percent: f32| {
-        spread_row(
+        label_and_value(
             row![style::swatch(color, 8.0, 2.0), text(label).size(12)]
                 .spacing(6)
                 .align_y(Alignment::Center),
@@ -186,18 +194,17 @@ fn cpu_usage_section<'a>(snapshot: &'a HardwareSnapshot, is_dark: bool) -> Eleme
     .into()
 }
 
+/// The 1, 5 and 15 minute load averages.
 fn load_average_section<'a>(snapshot: &'a HardwareSnapshot) -> Element<'a, Message> {
     let windows = ["1m", "5m", "15m"];
+    let mut section = column![text::title3("Load avg").size(13)];
 
-    windows
-        .iter()
-        .zip(snapshot.system.load_avg)
-        .fold(column![text::title3("Load avg").size(13)], |acc, (label, load)| {
-            acc.push(spread_row(text(*label).size(12), text(format!("{load:.2}")).size(12)))
-        })
-        .spacing(4)
-        .width(Length::FillPortion(1))
-        .into()
+    for (window, load) in windows.iter().zip(snapshot.system.load_avg) {
+        section = section
+            .push(label_and_value(text(*window).size(12), text(format!("{load:.2}")).size(12)));
+    }
+
+    section.spacing(4).width(Length::FillPortion(1)).into()
 }
 
 fn gpu_section<'a>(snapshot: &'a HardwareSnapshot, is_dark: bool) -> Element<'a, Message> {
@@ -207,7 +214,7 @@ fn gpu_section<'a>(snapshot: &'a HardwareSnapshot, is_dark: bool) -> Element<'a,
         None => text::caption("Integrated graphics or GPU idle").size(11).into(),
         Some(gpu) => {
             let line = |label: &'a str, value: String| {
-                spread_row(text::caption(label).size(11), text(value).size(11))
+                label_and_value(text::caption(label).size(11), text(value).size(11))
             };
 
             let mut readings = column![
@@ -261,12 +268,11 @@ fn storage_section<'a>(
     .align_y(Alignment::Center)
     .width(Length::Fill);
 
-    let drives = snapshot.storage.iter().fold(
-        column![].spacing(3).width(Length::Fill),
-        |list, drive| {
-            list.push(spread_row(text(&drive.name).size(12), temp_badge(drive.temp, unit)))
-        },
-    );
+    let mut drives = column![].spacing(3).width(Length::Fill);
+    for drive in &snapshot.storage {
+        drives =
+            drives.push(label_and_value(text(&drive.name).size(12), temp_badge(drive.temp, unit)));
+    }
 
     mouse_area(
         column![heading, determinate_linear(percent / 100.0), drives]

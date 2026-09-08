@@ -107,20 +107,29 @@ fn open_popup(offset: cosmic::iced::Vector, bounds: Rectangle) -> cosmic::surfac
     )
 }
 
-/// Nudges the popup so it lines up with the middle of the panel slot rather
-/// than the button, which may be smaller than the slot it sits in.
+/// Nudges the popup so it clears the whole panel slot, not just the button.
+///
+/// The popup is anchored to the button's rectangle, but a button can be
+/// shorter than the slot the panel reserves for it. When that happens the
+/// popup would overlap the panel, so it is pushed out by half the difference.
+///
+/// The panel supplies an offset already pointing away from its edge — negative
+/// above or left of it, positive below or right — so multiplying by the sign
+/// moves the popup further out whichever edge the panel is docked to.
 fn centering_offset(app: &AppModel, offset: (i32, i32), bounds: Rectangle) -> (i32, i32) {
-    let (icon_w, icon_h) = app.core.applet.suggested_size(true);
-    let (_, minor) = app.core.applet.suggested_padding(true);
+    let (icon_width, icon_height) = app.core.applet.suggested_size(true);
+    let (_, padding_across) = app.core.applet.suggested_padding(true);
 
-    let (slot, extent) = if app.core.applet.is_horizontal() {
-        (f32::from(icon_h + 2 * minor), bounds.height)
+    // Measure across the panel: its height when horizontal, width when not.
+    let (slot, button) = if app.core.applet.is_horizontal() {
+        (f32::from(icon_height + 2 * padding_across), bounds.height)
     } else {
-        (f32::from(icon_w + 2 * minor), bounds.width)
+        (f32::from(icon_width + 2 * padding_across), bounds.width)
     };
 
-    let shortfall = ((slot - extent) / 2.0).max(0.0).round() as i32;
+    let shortfall = ((slot - button) / 2.0).max(0.0).round() as i32;
     let (x, y) = offset;
+
     (x + x.signum() * shortfall, y + y.signum() * shortfall)
 }
 
