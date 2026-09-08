@@ -1,0 +1,16 @@
+pkgbase = cosmic-ext-hardware-monitor
+	pkgdesc = Native hardware and thermal monitor applet for the COSMIC desktop
+	pkgver = 1.0.0
+	pkgrel = 1
+	url = https://github.com/Kai-J-G/CosmicHardwareMonitor
+	arch = x86_64
+	arch = aarch64
+	license = MIT
+	makedepends = cargo
+	depends = libxkbcommon
+	optdepends = pciutils: read a GPU name that the driver does not expose
+	optdepends = nvidia-utils: NVIDIA telemetry via nvidia-smi
+	source = cosmic-ext-hardware-monitor-1.0.0.tar.gz::https://github.com/Kai-J-G/CosmicHardwareMonitor/archive/refs/tags/v1.0.0.tar.gz
+	sha256sums = ee4ae978e18f725ca52f45769b457c9b16439f99274ce8c18e01fcd010b70e54
+
+pkgname = cosmic-ext-hardware-monitor

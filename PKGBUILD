@@ -17,7 +17,7 @@ optdepends=(
     'nvidia-utils: NVIDIA telemetry via nvidia-smi'
 )
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('SKIP')
+sha256sums=('ee4ae978e18f725ca52f45769b457c9b16439f99274ce8c18e01fcd010b70e54')
 
 prepare() {
     cd "$_repo-$pkgver"
