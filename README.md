@@ -79,6 +79,9 @@ user/sys/idle split, load averages, VRAM, drive temperatures and uptime.
 | **libxkbcommon** headers | Linked by the windowing layer |
 | **pkgconf** / `pkg-config` | Used by dependency build scripts |
 
+On Arch and CachyOS, `makepkg -si` reads these from the `PKGBUILD` and installs
+them for you, so step 1 is only needed for the `just install` route.
+
 **Optional, improves what's shown**
 
 - `pciutils` — supplies a readable GPU name when the driver doesn't expose one.
@@ -129,18 +132,30 @@ cargo install just
 
 </details>
 
-### 2. Clone and install
+### 2. Clone
 
 ```bash
 git clone https://github.com/Kai-J-G/CosmicHardwareMonitor.git
 ```
 
 ```bash
-cd CosmicHardwareMonitor && just install
+cd CosmicHardwareMonitor
 ```
 
-That's it. `just install` compiles an optimised release build and installs it
-into your home directory — **no `sudo` required**.
+### 3. Install
+
+**On Arch or CachyOS**, build the package — pacman then tracks it, and
+`pacman -R` removes it cleanly:
+
+```bash
+makepkg -si
+```
+
+**On anything else**, install into your home directory. No `sudo` required:
+
+```bash
+just install
+```
 
 > **The first build takes a while.** Cargo fetches `libcosmic` and its
 > dependency tree from git and compiles the lot — expect several minutes, and
@@ -150,7 +165,9 @@ into your home directory — **no `sudo` required**.
 
 ### What gets installed
 
-Everything lands under `~/.local`, so nothing touches system directories:
+`makepkg -si` installs system-wide under `/usr`, the way any pacman package
+does. `just install` puts everything under `~/.local` instead, so it touches no
+system directories:
 
 | File | Path |
 | --- | --- |
@@ -235,6 +252,10 @@ If it doesn't appear in the applet list, see
 git pull && just install
 ```
 
+On Arch or CachyOS, `git pull && makepkg -si` instead. Note that the `PKGBUILD`
+builds the latest **tagged release**, not whatever is on `main`, so a pull only
+picks up a new version once one is tagged.
+
 The applet reads its settings from `cosmic-config`, so your theme, unit and
 refresh interval survive reinstalls.
 
@@ -250,12 +271,20 @@ pkill cosmic-panel
 
 ## Uninstalling
 
+Remove the applet from your panel first, in **COSMIC Settings → Desktop →
+Panel → Applets**. Then, if you installed the package:
+
+```bash
+sudo pacman -R cosmic-ext-hardware-monitor
+```
+
+or, if you used `just install`:
+
 ```bash
 just uninstall
 ```
 
-This removes every file listed above. Remove the applet from your panel first,
-in **COSMIC Settings → Desktop → Panel → Applets**.
+Either removes every file listed above.
 
 To also reclaim the build directory:
 
