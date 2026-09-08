@@ -1,4 +1,4 @@
-# TempTyle for COSMIC Desktop
+# Hardware Monitor for COSMIC Desktop
 
 A native hardware and thermal monitor applet for the **COSMIC Desktop Environment**, written in Rust with [System76's `libcosmic`](https://github.com/pop-os/libcosmic).
 
