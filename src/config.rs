@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::hardware::types::TemperatureUnit;
 
-pub const APP_ID: &str = "io.github.kaijg.CosmicHardwareMonitor";
+pub const APP_ID: &str = "io.github.kai_j_g.CosmicHardwareMonitor";
 pub const CONFIG_VERSION: u64 = 1;
 
 /// Whether the popup follows the desktop theme or is pinned to one appearance.

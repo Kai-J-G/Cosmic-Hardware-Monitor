@@ -114,7 +114,8 @@ pub struct CpuInfo {
     pub avg_freq_mhz: u32,
     /// Package draw in watts, or `None` where the RAPL counter is unreadable.
     pub power_watts: Option<f32>,
-    pub num_processes: usize,
+    /// `None` where the count cannot be trusted, as in a Flatpak sandbox.
+    pub num_processes: Option<usize>,
     pub num_threads: usize,
     /// Open file descriptors system-wide.
     pub num_handles: usize,

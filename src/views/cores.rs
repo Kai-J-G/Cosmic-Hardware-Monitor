@@ -66,17 +66,19 @@ fn telemetry<'a>(cpu: &'a CpuInfo, is_dark: bool) -> Element<'a, Message> {
     let power = cpu.power_watts.map_or_else(|| "Estimating…".to_string(), |w| format!("{w:.1} W"));
     let separator = || text::caption("·").size(11);
 
-    let strip = row![
-        entry("Power Draw:", power),
-        separator(),
-        entry("Processes:", cpu.num_processes.to_string()),
-        separator(),
-        entry("Threads:", cpu.num_threads.to_string()),
-        separator(),
-        entry("Handles:", cpu.num_handles.to_string()),
-    ]
-    .spacing(8)
-    .align_y(Alignment::Center);
+    let mut strip = row![entry("Power Draw:", power)].spacing(8).align_y(Alignment::Center);
+
+    // Omitted rather than shown wrong where the count is unavailable, which is
+    // the case inside a Flatpak sandbox.
+    if let Some(processes) = cpu.num_processes {
+        strip = strip.push(separator()).push(entry("Processes:", processes.to_string()));
+    }
+
+    let strip = strip
+        .push(separator())
+        .push(entry("Threads:", cpu.num_threads.to_string()))
+        .push(separator())
+        .push(entry("Handles:", cpu.num_handles.to_string()));
 
     container(strip)
         .padding([6, 12])

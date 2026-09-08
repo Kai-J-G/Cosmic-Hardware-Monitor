@@ -24,7 +24,15 @@ pub fn view<'a>(metrics: &'a StorageMetrics, is_dark: bool) -> Element<'a, Messa
     .width(Length::Fill);
 
     let partitions: Element<'a, Message> = if metrics.partitions.is_empty() {
-        text::caption("No mounted partitions detected.").size(12).into()
+        // Inside a Flatpak sandbox the mount table describes the sandbox, so
+        // the list is deliberately empty; say so rather than look broken.
+        let reason = if crate::hardware::sandbox::is_flatpak() {
+            "Partition usage is unavailable in the Flatpak build, which cannot see \
+             the host's filesystems. Throughput above is still accurate."
+        } else {
+            "No mounted partitions detected."
+        };
+        text::caption(reason).size(12).into()
     } else {
         let mut list = column![].spacing(sp.space_xs).width(Length::Fill);
         for partition in &metrics.partitions {

@@ -59,9 +59,7 @@ fn dials<'a>(
         ),
         None => (0.0, None),
     };
-    let disk_pct = snapshot.storage_metrics.root().map_or(0.0, |root| root.percent_used);
-
-    row![
+    let mut dials = row![
         dial(
             snapshot.cpu.overall_usage,
             "CPU",
@@ -70,11 +68,17 @@ fn dials<'a>(
         ),
         dial(gpu_load, "GPU", gpu_temp, ActiveTab::GpuDetail),
         dial(snapshot.memory.percent, "Memory", None, ActiveTab::MemoryDetail),
-        dial(disk_pct, "Disk", None, ActiveTab::StorageDetail),
     ]
     .spacing(18)
-    .align_y(Alignment::Center)
-    .into()
+    .align_y(Alignment::Center);
+
+    // Dropped rather than shown at zero where the root filesystem cannot be
+    // measured, which is the case inside a Flatpak sandbox.
+    if let Some(root) = snapshot.storage_metrics.root() {
+        dials = dials.push(dial(root.percent_used, "Disk", None, ActiveTab::StorageDetail));
+    }
+
+    dials.into()
 }
 
 /// The chevron that opens and closes the detail sections.
@@ -253,16 +257,18 @@ fn storage_section<'a>(
     unit: TemperatureUnit,
 ) -> Element<'a, Message> {
     let root = snapshot.storage_metrics.root();
-    let percent = root.map_or(0.0, |r| r.percent_used);
-    let summary = root.map_or_else(String::new, |r| {
-        format!("{:.1} GB / {:.1} GB ({percent:.0}%)", fmt::gb(r.used_bytes), fmt::gb(r.total_bytes))
-    });
 
     let heading = row![
         icon::from_name("drive-harddisk-symbolic").size(15),
         text::title3("Storage").size(13),
         cosmic::widget::Space::new().width(Length::Fill),
-        text::caption(summary).size(11),
+        text::caption(root.map_or_else(String::new, |r| format!(
+            "{:.1} GB / {:.1} GB ({:.0}%)",
+            fmt::gb(r.used_bytes),
+            fmt::gb(r.total_bytes),
+            r.percent_used
+        )))
+        .size(11),
     ]
     .spacing(6)
     .align_y(Alignment::Center)
@@ -274,14 +280,18 @@ fn storage_section<'a>(
             drives.push(label_and_value(text(&drive.name).size(12), temp_badge(drive.temp, unit)));
     }
 
-    mouse_area(
-        column![heading, determinate_linear(percent / 100.0), drives]
-            .spacing(5)
-            .width(Length::Fill),
-    )
-    .on_press(Message::SelectTab(ActiveTab::StorageDetail))
-    .interaction(cosmic::iced::mouse::Interaction::Pointer)
-    .into()
+    let mut section = column![heading].spacing(5).width(Length::Fill);
+
+    // Without a measurable root filesystem the bar would sit at zero, so the
+    // drive temperatures below stand on their own.
+    if let Some(root) = root {
+        section = section.push(determinate_linear(root.percent_used / 100.0));
+    }
+
+    mouse_area(section.push(drives))
+        .on_press(Message::SelectTab(ActiveTab::StorageDetail))
+        .interaction(cosmic::iced::mouse::Interaction::Pointer)
+        .into()
 }
 
 /// A temperature pill coloured by its thermal state.
