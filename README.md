@@ -1,18 +1,28 @@
 <div align="center">
 
-<img src="data/icons/logo.png" alt="Cosmic Hardware Monitor" width="128">
+<img src="data/icons/logo.png" alt="Cosmic Hardware Monitor" width="160">
 
 # COSMIC HARDWARE MONITOR
 
-**A native hardware and thermal monitor applet for the COSMIC desktop.**
+**Your machine's temperature, at a glance in the COSMIC panel.**
 
-Lives in your panel, shows the temperature at a glance, and opens into a full
-monitor for CPU, GPU, memory and storage.
+[![license](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
+[![release](https://img.shields.io/github/v/tag/Kai-J-G/CosmicHardwareMonitor?style=flat-square&label=release)](https://github.com/Kai-J-G/CosmicHardwareMonitor/tags)
+[![built with Rust](https://img.shields.io/badge/built%20with-Rust-000000?style=flat-square&logo=rust)](https://www.rust-lang.org)
+[![for COSMIC](https://img.shields.io/badge/for-COSMIC-6b21a8?style=flat-square)](https://system76.com/cosmic)
 
-Written in Rust with [libcosmic](https://github.com/pop-os/libcosmic).
-Reads straight from the kernel — no daemon, no helper service, no `lm_sensors` dependency.
+[🇬🇧](README.md) · [🇫🇷](README.fr.md)
+
+<img src="data/screenshots/overview.png" alt="The overview, with dials for CPU, GPU, memory and disk" width="420">
 
 </div>
+
+Lives in your panel showing a thermometer tinted by thermal state, and opens
+into a full monitor for CPU, GPU, memory and storage.
+
+Written in Rust with [libcosmic](https://github.com/pop-os/libcosmic). Reads
+straight from the kernel — no daemon, no helper service, no `lm_sensors`
+dependency.
 
 ---
 
