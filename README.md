@@ -1,6 +1,6 @@
 # TempTyle for COSMIC Desktop
 
-A native System Hardware and Thermal Monitor applet for **CachyOS** and the **COSMIC Desktop Environment**, written in Rust using [System76's `libcosmic`](https://github.com/pop-os/libcosmic).
+A native hardware and thermal monitor applet for the **COSMIC Desktop Environment**, written in Rust with [System76's `libcosmic`](https://github.com/pop-os/libcosmic).
 
 Inspired by [TempTyle](https://github.com/neojakey/TempTyle).
 
@@ -8,21 +8,17 @@ Inspired by [TempTyle](https://github.com/neojakey/TempTyle).
 
 ## Features
 
-- **Panel Applet Integration**: Lives directly in your COSMIC panel or dock with a live temperature icon and readout.
-- **Microsecond Direct Linux Telemetry**: Reads directly from Linux sysfs (`/sys/class/hwmon`, `/sys/class/drm`, `/proc/stat`, `/proc/meminfo`), with 0% idle CPU overhead and tiny memory footprint (~24MB RSS).
-- **AMD, Intel & NVIDIA Support**:
-  - **AMD CPU**: CCD & Package/Tctl temperatures (`k10temp`/`zenpower`), per-core frequency, and per-core utilization.
-  - **AMD GPU**: Edge, Junction/Hotspot, and Memory temperatures, GPU utilization %, VRAM used/total, power draw, and fan speed.
-  - **NVIDIA GPU**: Automatic fallback to `nvidia-smi` telemetry.
-  - **Intel CPU / GPU**: `coretemp` and `i915`/`xe` sensors.
-  - **Storage**: NVMe composite temperatures, sub-sensor temps, and critical threshold alerts.
-  - **Cooling Fans**: Real-time RPM tachometer monitoring across motherboard and GPU headers with active/stopped state detection.
-  - **System & RAM**: Memory usage breakdown, CachyOS kernel/specs, uptime, load averages, and DDR5 RAM SPD thermal sensors (`spd5118`).
-- **Interactive UI**:
-  - **Dynamic Thermal State Badge**: Color-coded based on temperature (Cool Cyan `<45°C`, Optimal Green `45-64°C`, Warm Amber `65-79°C`, Critical Red `80°C+`).
-  - **Live Sparkline Canvas**: Real-time 60fps temperature trend line chart with grid lines and gradient fill.
-  - **Vertical Core Bars**: Hardware core thermal gauges inspired by TempTyle.
-  - **One-Click Unit Toggle**: Seamlessly switch between `°C` and `°F`.
+- **Panel applet**: lives in your COSMIC panel or dock, showing a thermometer tinted by thermal state and the current CPU temperature.
+- **Direct kernel telemetry**: reads straight from `sysfs` and `procfs` — no daemon, no polling helper, no dependency on `lm_sensors`. All of `/sys/class/hwmon` is scanned once per refresh and shared between the CPU, GPU and drive collectors.
+- **Overview**: CPU, GPU, memory and disk dials, each a shortcut into its own tab, over an expandable panel with network throughput, the CPU user/sys/idle split, load averages, VRAM, drive temperatures and uptime.
+- **CPU tab**: package temperature, utilisation and average clock; power draw from RAPL where available; process, thread and file-descriptor counts; a temperature curve; and a per-core grid with thermal bars and live clocks.
+  - AMD (`k10temp` / `zenpower`): Tctl/Tdie package and per-CCD temperatures.
+  - Intel (`coretemp`): package and per-core temperatures.
+- **GPU tab**: utilisation, clock, power draw, edge and junction temperatures, plus VRAM usage.
+  - AMD via `sysfs` and the DRM device, NVIDIA via `nvidia-smi`, Intel via `i915`/`xe` hwmon.
+- **Memory tab**: in use and available, physical and swap breakdown, committed and cached, with a utilisation history chart.
+- **Storage tab**: whole-disk read and write throughput, and every mounted partition with its free space.
+- **Settings**: follow the desktop theme or pin light/dark, switch between °C and °F, and pick a refresh interval from 1s to 5s.
 
 ---
 
@@ -30,31 +26,54 @@ Inspired by [TempTyle](https://github.com/neojakey/TempTyle).
 
 ### Prerequisites (Arch / CachyOS)
 
-Ensure Rust and `just` are available:
 ```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-sudo pacman -S --needed just
+sudo pacman -S --needed rust just
 ```
 
-### Install Applet to User Environment
+### Install
 
-Run:
 ```bash
 just install
 ```
 
-This compiles the optimized release binary and installs:
+This builds the optimised release binary and installs:
+
 - Executable to `~/.local/bin/cosmic-ext-temptyle`
-- Desktop file to `~/.local/share/applications/com.github.neojakey.cosmic-ext-temptyle.desktop`
-- Metainfo to `~/.local/share/metainfo/com.github.neojakey.cosmic-ext-temptyle.metainfo.xml`
+- Desktop file to `~/.local/share/applications/`
+- Metainfo to `~/.local/share/metainfo/`
 - Icons to `~/.local/share/icons/hicolor/scalable/apps/`
 
-### Adding to COSMIC Panel
+Run `just uninstall` to remove all of it, and `just check` to compile and test without installing.
 
-1. Open **COSMIC Settings** -> **Desktop** -> **Panel** -> **Applets**.
-2. Click **Add Applet**.
-3. Select **TempTyle** and position it wherever you prefer (e.g. next to the Time or Weather applets).
-4. Click on the panel icon to open the full hardware monitoring popup!
+### Adding to the COSMIC panel
+
+1. Open **COSMIC Settings → Desktop → Panel → Applets**.
+2. Click **Add Applet** and select **Hardware Monitor**.
+3. Click the panel icon to open the popup.
+
+---
+
+## Layout
+
+```
+src/
+  main.rs            entry point
+  app.rs             applet state, messages and the update loop
+  config.rs          persisted settings (cosmic-config)
+  hardware/          reads the machine
+    sysfs.rs         sysfs/procfs helpers, hwmon enumeration, rate metering
+    cpu.rs           model, temperatures, utilisation, clocks, power
+    gpu.rs           AMD / NVIDIA / Intel telemetry
+    storage.rs       drive temperatures, throughput, partitions
+    system.rs        uptime, load, network, memory
+    types.rs         the data the views render
+  views/             renders the popup
+    panel.rs         panel button and popup surface
+    style.rs         shared container styling
+    fmt.rs           shared value formatting
+    overview.rs cores.rs gpu.rs memory.rs storage.rs settings.rs
+    sparkline.rs circular_gauge.rs vertical_bar.rs
+```
 
 ---
 

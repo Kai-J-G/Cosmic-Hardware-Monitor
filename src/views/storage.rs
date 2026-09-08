@@ -1,175 +1,108 @@
+//! Storage tab: disk throughput and per-partition usage.
+
 use cosmic::iced::{Alignment, Color, Length};
-use cosmic::widget::{button, column, container, determinate_linear, icon, row, scrollable, text};
+use cosmic::widget::{column, container, determinate_linear, icon, row, scrollable, text};
 use cosmic::Element;
 
-use crate::app::{ActiveTab, Message};
-use crate::hardware::types::StorageMetrics;
+use crate::app::Message;
+use crate::hardware::types::{PartitionInfo, StorageMetrics};
+use crate::views::{fmt, nav_row, spread_row, style, EMERALD};
 
-pub fn view_storage<'a>(
-    metrics: &'a StorageMetrics,
-    is_dark: bool,
-) -> Element<'a, Message> {
+const CYAN: Color = Color::from_rgb(0.0, 0.75, 1.0);
+
+/// Height of the partition list before it starts scrolling.
+const LIST_HEIGHT: f32 = 260.0;
+
+pub fn view<'a>(metrics: &'a StorageMetrics, is_dark: bool) -> Element<'a, Message> {
     let sp = cosmic::theme::spacing();
-    let emerald = Color::from_rgb(0.0, 0.90, 0.46);
-    let cyan = Color::from_rgb(0.0, 0.75, 1.0);
 
-    // 1. Navigation Breadcrumb Header
-    let back_btn = button::text("← Overview")
-        .padding([6, 12])
-        .class(cosmic::theme::Button::Standard)
-        .on_press(Message::SelectTab(ActiveTab::Overview));
-
-    let title = text::title3("Storage & Partition Metrics").size(14);
-    let nav_row = row![back_btn, cosmic::iced::widget::Space::new().width(Length::Fill), title]
-        .align_y(Alignment::Center)
-        .width(Length::Fill);
-
-    // 2. Read / Write Speed Cards
-    let speed_card = |label: &'static str, speed_str: String, icon_name: &'static str, accent: Color| {
-        let ico = icon::from_name(icon_name).size(18);
-        let lbl = text::caption(label).size(11);
-        let val = text::title3(speed_str).size(17);
-
-        let content = row![
-            ico,
-            column![lbl, val].spacing(2),
-        ]
-        .spacing(sp.space_s)
-        .align_y(Alignment::Center);
-
-        container(content)
-            .padding([10, 14])
-            .width(Length::FillPortion(1))
-            .class(cosmic::theme::Container::Custom(Box::new(move |_theme| {
-                cosmic::iced::widget::container::Style {
-                    background: Some(if is_dark {
-                        Color::from_rgba(accent.r, accent.g, accent.b, 0.08).into()
-                    } else {
-                        Color::from_rgba(accent.r, accent.g, accent.b, 0.06).into()
-                    }),
-                    border: cosmic::iced::Border {
-                        color: Color::from_rgba(accent.r, accent.g, accent.b, if is_dark { 0.25 } else { 0.20 }),
-                        width: 1.0,
-                        radius: 12.0.into(),
-                    },
-                    ..Default::default()
-                }
-            })))
-    };
-
-    let speeds_row = row![
-        speed_card("Read Speed", format!("↑ {}", format_rate(metrics.read_kbs)), "go-up-symbolic", cyan),
-        speed_card("Write Speed", format!("↓ {}", format_rate(metrics.write_kbs)), "go-down-symbolic", emerald),
+    let speeds = row![
+        speed_card("Read Speed", metrics.read_kbs, "go-up-symbolic", CYAN, is_dark),
+        speed_card("Write Speed", metrics.write_kbs, "go-down-symbolic", EMERALD, is_dark),
     ]
     .spacing(sp.space_s)
     .width(Length::Fill);
 
-    // 3. Partitions with Free Space per Partition
-    let partitions_title = text::title3("Mounted Partitions & Free Space").size(13);
-
-    let mut parts_list = column![].spacing(sp.space_xs).width(Length::Fill);
-
-    if metrics.partitions.is_empty() {
-        parts_list = parts_list.push(text::caption("No mounted partitions detected.").size(12));
+    let partitions: Element<'a, Message> = if metrics.partitions.is_empty() {
+        text::caption("No mounted partitions detected.").size(12).into()
     } else {
-        for part in &metrics.partitions {
-            let part_icon = icon::from_name("drive-harddisk-symbolic").size(18);
-            let mount_lbl = text::body(format!("Mount: {}", part.mount)).size(13);
-            let fs_badge = container(text::caption(&part.filesystem).size(10))
-                .padding([2, 6])
-                .class(cosmic::theme::Container::Custom(Box::new(move |_theme| {
-                    cosmic::iced::widget::container::Style {
-                        background: Some(if is_dark {
-                            Color::from_rgba(1.0, 1.0, 1.0, 0.06).into()
-                        } else {
-                            Color::from_rgba(0.0, 0.0, 0.0, 0.06).into()
-                        }),
-                        border: cosmic::iced::Border {
-                            radius: 4.0.into(),
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    }
-                })));
+        metrics
+            .partitions
+            .iter()
+            .fold(column![].spacing(sp.space_xs).width(Length::Fill), |list, part| {
+                list.push(partition_card(part, is_dark))
+            })
+            .into()
+    };
 
-            let top_line = row![
-                part_icon,
-                mount_lbl,
-                fs_badge,
-                cosmic::iced::widget::Space::new().width(Length::Fill),
-                text::title3(format!("{:.1}% used", part.percent_used)).size(13),
-            ]
-            .spacing(sp.space_xs)
-            .align_y(Alignment::Center)
-            .width(Length::Fill);
+    column![
+        nav_row("Storage & Partition Metrics"),
+        speeds,
+        text::title3("Mounted Partitions & Free Space").size(13),
+        scrollable(partitions).height(Length::Fixed(LIST_HEIGHT)).width(Length::Fill),
+    ]
+    .spacing(sp.space_m)
+    .width(Length::Fill)
+    .into()
+}
 
-            let bar = determinate_linear((part.percent_used / 100.0).clamp(0.0, 1.0));
+/// Throughput in one direction, tinted with its own accent.
+fn speed_card<'a>(
+    label: &'a str,
+    kbs: f32,
+    icon_name: &'a str,
+    accent: Color,
+    is_dark: bool,
+) -> Element<'a, Message> {
+    let sp = cosmic::theme::spacing();
+    let content = row![
+        icon::from_name(icon_name).size(18),
+        column![text::caption(label).size(11), text::title3(fmt::rate(kbs)).size(17)].spacing(2),
+    ]
+    .spacing(sp.space_s)
+    .align_y(Alignment::Center);
 
-            let free_str = format!("Free: {}", format_bytes(part.free_bytes));
-            let used_total_str = format!("{} used of {}", format_bytes(part.used_bytes), format_bytes(part.total_bytes));
-
-            let bottom_line = row![
-                text::body(free_str).size(11),
-                cosmic::iced::widget::Space::new().width(Length::Fill),
-                text::caption(used_total_str).size(11),
-            ]
-            .align_y(Alignment::Center)
-            .width(Length::Fill);
-
-            let card_content = column![top_line, bar, bottom_line]
-                .spacing(5)
-                .width(Length::Fill);
-
-            let part_card = container(card_content)
-                .padding([sp.space_s, sp.space_m])
-                .width(Length::Fill)
-                .class(cosmic::theme::Container::Custom(Box::new(move |_theme| {
-                    cosmic::iced::widget::container::Style {
-                        background: Some(if is_dark {
-                            Color::from_rgba(1.0, 1.0, 1.0, 0.03).into()
-                        } else {
-                            Color::from_rgba(0.0, 0.0, 0.0, 0.03).into()
-                        }),
-                        border: cosmic::iced::Border {
-                            color: if is_dark {
-                                Color::from_rgba(1.0, 1.0, 1.0, 0.06)
-                            } else {
-                                Color::from_rgba(0.0, 0.0, 0.0, 0.08)
-                            },
-                            width: 1.0,
-                            radius: 12.0.into(),
-                        },
-                        ..Default::default()
-                    }
-                })));
-
-            parts_list = parts_list.push(part_card);
-        }
-    }
-
-    let scrollable_parts = scrollable(parts_list)
-        .height(Length::Fixed(260.0))
-        .width(Length::Fill);
-
-    column![nav_row, speeds_row, partitions_title, scrollable_parts]
-        .spacing(sp.space_m)
-        .width(Length::Fill)
+    container(content)
+        .padding([10, 14])
+        .width(Length::FillPortion(1))
+        .class(style::accent_card(accent, is_dark))
         .into()
 }
 
-fn format_rate(kbs: f32) -> String {
-    if kbs >= 1024.0 {
-        format!("{:.1} MB/s", kbs / 1024.0)
-    } else {
-        format!("{:.1} KB/s", kbs)
-    }
-}
+/// One mount point: where it is, how full it is, and how much is left.
+fn partition_card<'a>(part: &'a PartitionInfo, is_dark: bool) -> Element<'a, Message> {
+    let sp = cosmic::theme::spacing();
 
-fn format_bytes(bytes: u64) -> String {
-    let mb = bytes as f64 / (1024.0 * 1024.0);
-    if mb >= 1024.0 {
-        format!("{:.2} GB", mb / 1024.0)
-    } else {
-        format!("{:.0} MB", mb)
-    }
+    let heading = row![
+        icon::from_name("drive-harddisk-symbolic").size(18),
+        text::body(format!("Mount: {}", part.mount)).size(13),
+        container(text::caption(&part.filesystem).size(10))
+            .padding([2, 6])
+            .class(style::chip(is_dark)),
+        cosmic::widget::Space::new().width(Length::Fill),
+        text::title3(format!("{:.1}% used", part.percent_used)).size(13),
+    ]
+    .spacing(sp.space_xs)
+    .align_y(Alignment::Center)
+    .width(Length::Fill);
+
+    let footer = spread_row(
+        text::body(format!("Free: {}", fmt::bytes(part.free_bytes))).size(11),
+        text::caption(format!(
+            "{} used of {}",
+            fmt::bytes(part.used_bytes),
+            fmt::bytes(part.total_bytes)
+        ))
+        .size(11),
+    );
+
+    container(
+        column![heading, determinate_linear((part.percent_used / 100.0).clamp(0.0, 1.0)), footer]
+            .spacing(5)
+            .width(Length::Fill),
+    )
+    .padding([sp.space_s, sp.space_m])
+    .width(Length::Fill)
+    .class(style::card(is_dark))
+    .into()
 }

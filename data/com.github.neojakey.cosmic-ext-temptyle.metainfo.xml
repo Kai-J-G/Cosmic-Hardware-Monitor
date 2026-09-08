@@ -6,7 +6,7 @@
   <name>Hardware Monitor</name>
   <summary>Native hardware monitor applet for COSMIC Desktop</summary>
   <description>
-    <p>A sleek, native System Temperature and Hardware Monitor for COSMIC DE with CPU core tracking, GPU and VRAM metrics, cooling fans, NVMe storage, and system memory telemetry.</p>
+    <p>A native hardware and thermal monitor for COSMIC DE, with per-core CPU tracking, GPU and VRAM metrics, NVMe drive temperatures, disk throughput and memory telemetry read straight from the kernel.</p>
   </description>
   <categories>
     <category>Utility</category>

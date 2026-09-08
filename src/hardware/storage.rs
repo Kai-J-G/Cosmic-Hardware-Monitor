@@ -1,225 +1,144 @@
+//! Drive temperatures, disk throughput and mounted-partition usage.
+
 use std::collections::HashSet;
 use std::ffi::CString;
-use std::fs;
 use std::mem::MaybeUninit;
-use std::time::Instant;
 
+use super::sysfs::{self, Hwmon, RateMeter};
 use super::types::{PartitionInfo, StorageInfo, StorageMetrics};
 
-#[derive(Debug, Default)]
+/// A disk sector is 512 bytes in `/proc/diskstats`, regardless of the
+/// hardware's real sector size.
+const SECTOR_BYTES: u64 = 512;
+
+/// hwmon drivers that expose drive temperatures.
+const DRIVE_CHIPS: [&str; 2] = ["nvme", "drivetemp"];
+
+/// Mount points that duplicate or clutter the partition list.
+const IGNORED_MOUNTS: [&str; 4] = ["/var/", "/snap", "/root", "/srv"];
+
+#[derive(Default)]
 pub struct StorageCollector {
-    last_sectors_read: u64,
-    last_sectors_written: u64,
-    last_time: Option<Instant>,
+    io: RateMeter,
 }
 
 impl StorageCollector {
-    pub fn new() -> Self {
-        Self::default()
-    }
+    pub fn collect(&mut self, chips: &[Hwmon]) -> (Vec<StorageInfo>, StorageMetrics) {
+        let (sectors_read, sectors_written) = read_diskstats();
+        let (read_kbs, write_kbs) = self
+            .io
+            .sample(sectors_read * SECTOR_BYTES, sectors_written * SECTOR_BYTES);
 
-    pub fn collect(&mut self) -> (Vec<StorageInfo>, StorageMetrics) {
-        let drives = read_storage_info();
-        let (read_kbs, write_kbs) = self.read_disk_io();
-        let partitions = read_partitions();
-        (drives, StorageMetrics { read_kbs, write_kbs, partitions })
-    }
-
-    fn read_disk_io(&mut self) -> (f32, f32) {
-        let (sectors_read, sectors_written) = parse_diskstats_sectors();
-        let now = Instant::now();
-        let mut rates = (0.0f32, 0.0f32);
-
-        if let Some(prev_time) = self.last_time {
-            let dt = (now - prev_time).as_secs_f32();
-            if dt > 0.05 {
-                let r_diff = sectors_read.saturating_sub(self.last_sectors_read);
-                let w_diff = sectors_written.saturating_sub(self.last_sectors_written);
-                let r_bytes = r_diff * 512;
-                let w_bytes = w_diff * 512;
-                rates = ((r_bytes as f32 / dt) / 1024.0, (w_bytes as f32 / dt) / 1024.0);
-            }
-        }
-
-        self.last_sectors_read = sectors_read;
-        self.last_sectors_written = sectors_written;
-        self.last_time = Some(now);
-        rates
+        let metrics = StorageMetrics { read_kbs, write_kbs, partitions: read_partitions() };
+        (read_drive_temps(chips), metrics)
     }
 }
 
-fn parse_diskstats_sectors() -> (u64, u64) {
-    let mut total_r = 0u64;
-    let mut total_w = 0u64;
-
-    if let Ok(content) = fs::read_to_string("/proc/diskstats") {
-        for line in content.lines() {
-            let parts: Vec<&str> = line.split_whitespace().collect();
-            if parts.len() < 10 {
-                continue;
-            }
-            let dev_name = parts[2];
-            let is_root_disk = (dev_name.starts_with("nvme") && dev_name.contains('n') && !dev_name.contains('p'))
-                || (dev_name.starts_with("sd") && dev_name.len() == 3);
-
-            if is_root_disk {
-                let r_sectors: u64 = parts[5].parse().unwrap_or(0);
-                let w_sectors: u64 = parts[9].parse().unwrap_or(0);
-                total_r += r_sectors;
-                total_w += w_sectors;
-            }
-        }
-    }
-    (total_r, total_w)
+/// Reads each drive's composite temperature (`temp1_input`).
+fn read_drive_temps(chips: &[Hwmon]) -> Vec<StorageInfo> {
+    chips
+        .iter()
+        .filter(|c| DRIVE_CHIPS.iter().any(|d| c.name.starts_with(d)))
+        .filter_map(|chip| Some(StorageInfo { name: drive_model(chip), temp: chip.temp(1)? }))
+        .collect()
 }
 
-pub fn read_partitions() -> Vec<PartitionInfo> {
-    let mut list = Vec::new();
-    let mut seen_mounts = HashSet::new();
-
-    if let Ok(content) = fs::read_to_string("/proc/mounts") {
-        for line in content.lines() {
-            let parts: Vec<&str> = line.split_whitespace().collect();
-            if parts.len() < 3 {
-                continue;
-            }
-            let dev = parts[0];
-            let mount = parts[1];
-            let fs_type = parts[2];
-
-            if !dev.starts_with("/dev/") {
-                continue;
-            }
-            if mount.starts_with("/var/")
-                || mount == "/srv"
-                || mount == "/root"
-                || mount.contains("/var/lib/docker")
-                || mount.contains("/var/lib/flatpak")
-                || mount.contains("/snap")
-            {
-                continue;
-            }
-            if seen_mounts.contains(mount) {
-                continue;
-            }
-            seen_mounts.insert(mount.to_string());
-
-            let c_path = match CString::new(mount) {
-                Ok(p) => p,
-                Err(_) => continue,
-            };
-
-            let mut stat = MaybeUninit::<libc::statvfs>::uninit();
-            let res = unsafe { libc::statvfs(c_path.as_ptr(), stat.as_mut_ptr()) };
-            if res == 0 {
-                let stat = unsafe { stat.assume_init() };
-                let block_size = if stat.f_frsize > 0 { stat.f_frsize } else { stat.f_bsize } as u64;
-                let total_bytes = stat.f_blocks as u64 * block_size;
-                let free_bytes = stat.f_bavail as u64 * block_size;
-                let used_bytes = total_bytes.saturating_sub(free_bytes);
-                if total_bytes > 0 {
-                    let percent_used = (used_bytes as f32 / total_bytes as f32) * 100.0;
-                    list.push(PartitionInfo {
-                        mount: mount.to_string(),
-                        filesystem: fs_type.to_string(),
-                        total_bytes,
-                        free_bytes,
-                        used_bytes,
-                        percent_used: percent_used.clamp(0.0, 100.0),
-                    });
-                }
-            }
-        }
-    }
-
-    list.sort_by(|a, b| {
-        if a.mount == "/" {
-            std::cmp::Ordering::Less
-        } else if b.mount == "/" {
-            std::cmp::Ordering::Greater
-        } else {
-            a.mount.cmp(&b.mount)
-        }
-    });
-
-    list
+/// Prefers the drive's advertised model over the bare driver name.
+fn drive_model(chip: &Hwmon) -> String {
+    sysfs::read(chip.dir.join("device/model"))
+        .filter(|m| !m.is_empty())
+        .map(|model| format!("NVMe {model}"))
+        .unwrap_or_else(|| format!("Storage ({})", chip.name))
 }
 
-pub fn read_storage_info() -> Vec<StorageInfo> {
-    let mut storage_list = Vec::new();
-
-    let Ok(entries) = fs::read_dir("/sys/class/hwmon") else {
-        return storage_list;
+/// Totals read and written sectors across whole disks.
+///
+/// Partitions are skipped so their I/O is not counted twice on top of the
+/// parent disk's.
+fn read_diskstats() -> (u64, u64) {
+    let Some(content) = sysfs::read("/proc/diskstats") else {
+        return (0, 0);
     };
 
-    for entry in entries.flatten() {
-        let path = entry.path();
-        let chip_name = fs::read_to_string(path.join("name"))
-            .unwrap_or_else(|_| String::new())
-            .trim()
-            .to_string();
-
-        if chip_name.starts_with("nvme") || chip_name.starts_with("drivetemp") {
-            let mut composite_temp = None;
-            let mut sensor1_temp = None;
-            let mut sensor2_temp = None;
-            let mut crit_temp = None;
-
-            if let Ok(t) = read_sysfs_f32(&path.join("temp1_input")) {
-                composite_temp = Some(t / 1000.0);
+    content
+        .lines()
+        .filter_map(|line| {
+            let fields: Vec<&str> = line.split_whitespace().collect();
+            let name = fields.get(2)?;
+            if !is_whole_disk(name) {
+                return None;
             }
-            if let Ok(t) = read_sysfs_f32(&path.join("temp2_input")) {
-                sensor1_temp = Some(t / 1000.0);
-            }
-            if let Ok(t) = read_sysfs_f32(&path.join("temp3_input")) {
-                sensor2_temp = Some(t / 1000.0);
-            }
-            if let Ok(t) = read_sysfs_f32(&path.join("temp1_crit")) {
-                crit_temp = Some(t / 1000.0);
-            }
-
-            if let Some(comp_temp) = composite_temp {
-                let name = get_drive_model(&path, &chip_name);
-                storage_list.push(StorageInfo {
-                    name,
-                    composite_temp: comp_temp,
-                    sensor1_temp,
-                    sensor2_temp,
-                    crit_temp,
-                });
-            }
-        }
-    }
-
-    storage_list
+            Some((fields.get(5)?.parse().ok()?, fields.get(9)?.parse().ok()?))
+        })
+        .fold((0u64, 0u64), |(r, w), (dr, dw): (u64, u64)| (r + dr, w + dw))
 }
 
-fn get_drive_model(hwmon_path: &std::path::Path, chip_name: &str) -> String {
-    let dev_model = hwmon_path.join("device/model");
-    if let Ok(m) = fs::read_to_string(&dev_model) {
-        let trimmed = m.trim();
-        if !trimmed.is_empty() {
-            return format!("NVMe {}", trimmed);
-        }
-    }
-
-    if chip_name.starts_with("nvme") {
-        if let Ok(entries) = fs::read_dir("/sys/class/nvme") {
-            for e in entries.flatten() {
-                if let Ok(m) = fs::read_to_string(e.path().join("model")) {
-                    let trimmed = m.trim();
-                    if !trimmed.is_empty() {
-                        return format!("NVMe {}", trimmed);
-                    }
-                }
-            }
-        }
-    }
-
-    format!("Storage ({chip_name})")
+/// `nvme0n1` and `sda` are disks; `nvme0n1p2` and `sda1` are partitions of one.
+fn is_whole_disk(name: &str) -> bool {
+    (name.starts_with("nvme") && !name.contains('p')) || (name.starts_with("sd") && name.len() == 3)
 }
 
-fn read_sysfs_f32(path: &std::path::Path) -> Result<f32, ()> {
-    let content = fs::read_to_string(path).map_err(|_| ())?;
-    content.trim().parse::<f32>().map_err(|_| ())
+/// Lists real, distinct mounted filesystems with their usage.
+fn read_partitions() -> Vec<PartitionInfo> {
+    let Some(content) = sysfs::read("/proc/mounts") else {
+        return Vec::new();
+    };
+
+    let mut seen = HashSet::new();
+    let mut partitions: Vec<PartitionInfo> = content
+        .lines()
+        .filter_map(|line| {
+            let mut fields = line.split_whitespace();
+            let device = fields.next()?;
+            let mount = fields.next()?;
+            let filesystem = fields.next()?;
+
+            // Only block devices, and only the first mount of each path.
+            if !device.starts_with("/dev/")
+                || IGNORED_MOUNTS.iter().any(|i| mount.starts_with(i) || mount.contains(i))
+                || !seen.insert(mount.to_string())
+            {
+                return None;
+            }
+
+            let (total_bytes, free_bytes) = disk_usage(mount)?;
+            let used_bytes = total_bytes.saturating_sub(free_bytes);
+            Some(PartitionInfo {
+                mount: mount.to_string(),
+                filesystem: filesystem.to_string(),
+                total_bytes,
+                free_bytes,
+                used_bytes,
+                percent_used: ((used_bytes as f32 / total_bytes as f32) * 100.0).clamp(0.0, 100.0),
+            })
+        })
+        .collect();
+
+    // Root first, the rest alphabetically.
+    partitions.sort_by(|a, b| (a.mount != "/", &a.mount).cmp(&(b.mount != "/", &b.mount)));
+    partitions
+}
+
+/// Total and available bytes for a mount point, via `statvfs(3)`.
+///
+/// Returns `None` for pseudo-filesystems that report a zero-sized volume.
+fn disk_usage(mount: &str) -> Option<(u64, u64)> {
+    let path = CString::new(mount).ok()?;
+    let mut stat = MaybeUninit::<libc::statvfs>::uninit();
+
+    // SAFETY: `path` is a valid NUL-terminated string and `stat` is only read
+    // once the call reports success, which means the kernel initialised it.
+    let stat = unsafe {
+        if libc::statvfs(path.as_ptr(), stat.as_mut_ptr()) != 0 {
+            return None;
+        }
+        stat.assume_init()
+    };
+
+    let block_size = if stat.f_frsize > 0 { stat.f_frsize } else { stat.f_bsize } as u64;
+    let total = stat.f_blocks as u64 * block_size;
+    // `f_bavail` excludes root-reserved blocks, so it matches what users can fill.
+    let free = stat.f_bavail as u64 * block_size;
+
+    (total > 0).then_some((total, free))
 }

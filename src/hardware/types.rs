@@ -1,108 +1,78 @@
-use serde::{Deserialize, Serialize};
+//! Plain data the collectors produce and the views render.
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+/// Unit the user has chosen for every temperature in the UI.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TemperatureUnit {
     Celsius,
     Fahrenheit,
 }
 
 impl TemperatureUnit {
-    pub fn format_temp(self, celsius: f32) -> String {
+    /// Converts a Celsius reading into this unit.
+    fn convert(self, celsius: f32) -> f32 {
         match self {
-            Self::Celsius => format!("{:.0}°C", celsius),
-            Self::Fahrenheit => format!("{:.0}°F", (celsius * 9.0 / 5.0) + 32.0),
+            Self::Celsius => celsius,
+            Self::Fahrenheit => (celsius * 9.0 / 5.0) + 32.0,
         }
     }
 
-    pub fn format_temp_val(self, celsius: f32) -> (String, &'static str) {
-        match self {
-            Self::Celsius => (format!("{:.0}", celsius), "°C"),
-            Self::Fahrenheit => (format!("{:.0}", (celsius * 9.0 / 5.0) + 32.0), "°F"),
-        }
+    /// Full reading with its unit, e.g. `62°C`.
+    pub fn format(self, celsius: f32) -> String {
+        let symbol = match self {
+            Self::Celsius => "C",
+            Self::Fahrenheit => "F",
+        };
+        format!("{:.0}°{symbol}", self.convert(celsius))
     }
 
-    pub fn format_temp_short(self, celsius: f32) -> String {
-        match self {
-            Self::Celsius => format!("{:.0}°", celsius),
-            Self::Fahrenheit => format!("{:.0}°", (celsius * 9.0 / 5.0) + 32.0),
-        }
+    /// Degree-only reading for tight spots such as the panel, e.g. `62°`.
+    pub fn format_short(self, celsius: f32) -> String {
+        format!("{:.0}°", self.convert(celsius))
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+/// Coarse thermal band a reading falls into, used to colour the UI.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ThermalStatus {
-    Cool,     // < 45°C
-    Optimal,  // 45°C - 64°C
-    Normal,   // 65°C - 74°C
-    Warm,     // 75°C - 84°C
-    Critical, // 85°C+
+    Cool,
+    Optimal,
+    Normal,
+    Warm,
+    Critical,
 }
 
 impl ThermalStatus {
     pub fn from_celsius(temp: f32) -> Self {
-        if temp < 45.0 {
-            Self::Cool
-        } else if temp < 65.0 {
-            Self::Optimal
-        } else if temp < 75.0 {
-            Self::Normal
-        } else if temp < 85.0 {
-            Self::Warm
-        } else {
-            Self::Critical
+        match temp {
+            t if t < 45.0 => Self::Cool,
+            t if t < 65.0 => Self::Optimal,
+            t if t < 75.0 => Self::Normal,
+            t if t < 85.0 => Self::Warm,
+            _ => Self::Critical,
         }
     }
 
-    pub fn label(self) -> &'static str {
-        match self {
-            Self::Cool => "Cool Thermal State",
-            Self::Optimal => "Optimal Thermal State",
-            Self::Normal => "Normal Thermal State",
-            Self::Warm => "Warm Thermal State",
-            Self::Critical => "Critical Thermal State",
-        }
-    }
-
-    /// [r, g, b] color components in 0.0..1.0
+    /// Accent colour for this band as `[r, g, b]` in `0.0..=1.0`.
     pub fn rgb(self) -> [f32; 3] {
         match self {
-            Self::Cool => [0.0, 0.75, 1.0],       // #00B0FF Neon Cyan
-            Self::Optimal => [0.0, 0.90, 0.46],   // #00E676 Vibrant Emerald
-            Self::Normal => [1.0, 0.75, 0.0],     // #FFC107 Warm Gold
-            Self::Warm => [1.0, 0.55, 0.0],       // #FF8C00 Amber
-            Self::Critical => [1.0, 0.30, 0.30],   // #FF4D4D Coral Red
+            Self::Cool => [0.00, 0.75, 1.00],     // cyan
+            Self::Optimal => [0.00, 0.90, 0.46],  // emerald
+            Self::Normal => [1.00, 0.75, 0.00],   // gold
+            Self::Warm => [1.00, 0.55, 0.00],     // amber
+            Self::Critical => [1.00, 0.30, 0.30], // coral
         }
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ThermalSummary {
-    pub package_temp: f32,
-    pub gpu_temp: Option<f32>,
-    pub max_temp: f32,
-    pub min_temp: f32,
-    pub avg_temp: f32,
-    pub total_cores: usize,
-    pub active_fans_count: usize,
-    pub thermal_status: ThermalStatus,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct CpuCoreInfo {
-    pub id: usize,
     pub label: String,
     pub temp: f32,
     pub usage_percent: f32,
     pub freq_mhz: Option<u32>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProcessInfo {
-    pub name: String,
-    pub cpu_percent: f32,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct CpuInfo {
     pub model: String,
     pub package_temp: f32,
@@ -118,39 +88,26 @@ pub struct CpuInfo {
     pub num_handles: usize,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct GpuInfo {
     pub name: String,
     pub edge_temp: f32,
     pub junction_temp: Option<f32>,
-    pub mem_temp: Option<f32>,
     pub utilization_percent: u32,
     pub clock_mhz: Option<u32>,
     pub vram_used_bytes: u64,
     pub vram_total_bytes: u64,
     pub power_draw_watts: Option<f32>,
-    pub power_cap_watts: Option<f32>,
-    pub fan_rpm: Option<u32>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FanInfo {
-    pub chip: String,
-    pub name: String,
-    pub rpm: u32,
-    pub is_active: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Temperature of one physical drive.
+#[derive(Debug, Clone)]
 pub struct StorageInfo {
     pub name: String,
-    pub composite_temp: f32,
-    pub sensor1_temp: Option<f32>,
-    pub sensor2_temp: Option<f32>,
-    pub crit_temp: Option<f32>,
+    pub temp: f32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct PartitionInfo {
     pub mount: String,
     pub filesystem: String,
@@ -160,14 +117,22 @@ pub struct PartitionInfo {
     pub percent_used: f32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct StorageMetrics {
     pub read_kbs: f32,
     pub write_kbs: f32,
+    /// Mounted partitions, root first.
     pub partitions: Vec<PartitionInfo>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+impl StorageMetrics {
+    /// The root filesystem, which stands in for "the disk" on the overview.
+    pub fn root(&self) -> Option<&PartitionInfo> {
+        self.partitions.iter().find(|p| p.mount == "/")
+    }
+}
+
+#[derive(Debug, Clone, Default)]
 pub struct MemoryMetrics {
     pub total_bytes: u64,
     pub used_bytes: u64,
@@ -180,41 +145,78 @@ pub struct MemoryMetrics {
     pub percent: f32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default)]
 pub struct SystemInfo {
-    pub hostname: String,
-    pub os_name: String,
-    pub kernel: String,
     pub uptime_seconds: u64,
     pub load_avg: [f32; 3],
-    pub mem_used_bytes: u64,
-    pub mem_total_bytes: u64,
-    pub mem_percent: f32,
-    pub spd_temps: Vec<(String, f32)>,
-    pub disk_used_bytes: u64,
-    pub disk_total_bytes: u64,
-    pub disk_percent: f32,
     pub net_rx_kbs: f32,
     pub net_tx_kbs: f32,
-    pub top_processes: Vec<ProcessInfo>,
 }
 
-#[allow(dead_code)]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct HistoryPoint {
-    pub temp: f32,
-    pub gpu_temp: Option<f32>,
-    pub cpu_load: f32,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// One complete reading of the machine, rebuilt on every refresh tick.
+#[derive(Debug, Clone)]
 pub struct HardwareSnapshot {
-    pub summary: ThermalSummary,
     pub cpu: CpuInfo,
     pub gpu: Option<GpuInfo>,
-    pub fans: Vec<FanInfo>,
     pub storage: Vec<StorageInfo>,
     pub storage_metrics: StorageMetrics,
     pub memory: MemoryMetrics,
     pub system: SystemInfo,
+}
+
+impl HardwareSnapshot {
+    /// The reading the panel badge reflects: whichever of CPU package and GPU
+    /// edge is currently hotter.
+    pub fn primary_temp(&self) -> f32 {
+        match &self.gpu {
+            Some(gpu) => self.cpu.package_temp.max(gpu.edge_temp),
+            None => self.cpu.package_temp,
+        }
+    }
+
+    pub fn status(&self) -> ThermalStatus {
+        ThermalStatus::from_celsius(self.primary_temp())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn formats_both_units() {
+        assert_eq!(TemperatureUnit::Celsius.format(62.4), "62°C");
+        assert_eq!(TemperatureUnit::Celsius.format_short(62.4), "62°");
+        assert_eq!(TemperatureUnit::Fahrenheit.format(100.0), "212°F");
+        assert_eq!(TemperatureUnit::Fahrenheit.format(0.0), "32°F");
+    }
+
+    #[test]
+    fn thermal_bands_cover_their_boundaries() {
+        assert_eq!(ThermalStatus::from_celsius(44.9), ThermalStatus::Cool);
+        assert_eq!(ThermalStatus::from_celsius(45.0), ThermalStatus::Optimal);
+        assert_eq!(ThermalStatus::from_celsius(65.0), ThermalStatus::Normal);
+        assert_eq!(ThermalStatus::from_celsius(75.0), ThermalStatus::Warm);
+        assert_eq!(ThermalStatus::from_celsius(85.0), ThermalStatus::Critical);
+    }
+
+    #[test]
+    fn root_partition_is_found_wherever_it_sits() {
+        let partition = |mount: &str| PartitionInfo {
+            mount: mount.to_string(),
+            filesystem: "btrfs".to_string(),
+            total_bytes: 100,
+            free_bytes: 40,
+            used_bytes: 60,
+            percent_used: 60.0,
+        };
+
+        let metrics = StorageMetrics {
+            partitions: vec![partition("/boot"), partition("/")],
+            ..Default::default()
+        };
+
+        assert_eq!(metrics.root().map(|r| r.mount.as_str()), Some("/"));
+        assert!(StorageMetrics::default().root().is_none());
+    }
 }

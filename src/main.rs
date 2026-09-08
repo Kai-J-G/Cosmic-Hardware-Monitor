@@ -1,7 +1,8 @@
+//! TempTyle — a hardware and thermal monitor applet for the COSMIC desktop.
+
 mod app;
 mod config;
 mod hardware;
-mod sparkline;
 mod views;
 
 fn main() -> cosmic::iced::Result {
