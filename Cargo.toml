@@ -1,0 +1,19 @@
+[package]
+name = "cosmic-ext-temptyle"
+version = "1.0.0"
+edition = "2021"
+license = "MIT"
+description = "Native COSMIC desktop applet hardware temperature and system monitor"
+repository = "https://github.com/neojakey/TempTyle"
+
+[dependencies]
+chrono = { version = "0.4", default-features = false, features = ["alloc", "clock"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+libc = "0.2"
+
+[dependencies.libcosmic]
+git = "https://github.com/pop-os/libcosmic"
+default-features = false
+features = ["applet", "applet-token", "dbus-config", "multi-window", "tokio", "wayland"]
