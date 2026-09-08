@@ -40,7 +40,7 @@
           "type": "git",
           "url": "https://github.com/Kai-J-G/CosmicHardwareMonitor.git",
           "tag": "v1.0.0",
-          "commit": "95281adcbed4957d3d94ef83f29fc602eada6473"
+          "commit": "b6f2add08cb289dd04ad2959eb432638abe79800"
         },
         "cargo-sources.json"
       ]

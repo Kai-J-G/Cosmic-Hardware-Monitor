@@ -1,3 +1,5 @@
 target/
 **/*.rs.bk
 *.bak
+.flatpak-build/
+.flatpak-builder/
