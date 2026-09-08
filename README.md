@@ -155,9 +155,9 @@ Everything lands under `~/.local`, so nothing touches system directories:
 | File | Path |
 | --- | --- |
 | Executable | `~/.local/bin/cosmic-ext-hardware-monitor` |
-| Desktop entry | `~/.local/share/applications/io.github.kaijg.CosmicHardwareMonitor.desktop` |
-| AppStream metainfo | `~/.local/share/metainfo/io.github.kaijg.CosmicHardwareMonitor.metainfo.xml` |
-| Icons | `~/.local/share/icons/hicolor/scalable/apps/io.github.kaijg.CosmicHardwareMonitor{,-symbolic}.svg` |
+| Desktop entry | `~/.local/share/applications/io.github.kai_j_g.CosmicHardwareMonitor.desktop` |
+| AppStream metainfo | `~/.local/share/metainfo/io.github.kai_j_g.CosmicHardwareMonitor.metainfo.xml` |
+| Icons | `~/.local/share/icons/hicolor/scalable/apps/io.github.kai_j_g.CosmicHardwareMonitor{,-symbolic}.svg` |
 
 The desktop entry's `Exec=` line is rewritten to the absolute path of the
 installed binary, so the applet works regardless of your `PATH`.
@@ -175,6 +175,42 @@ Note that the `install` recipe builds first. For a system-wide install, build
 as your normal user and only elevate the copy step — running the whole recipe
 under `sudo` would compile as root and leave a root-owned `target/` directory
 that your user can no longer write to.
+
+</details>
+
+<details>
+<summary><strong>Building the Flatpak</strong></summary>
+
+A Flatpak manifest is included. To build and install it locally:
+
+```bash
+flatpak install -y flathub org.freedesktop.Platform//25.08 org.freedesktop.Sdk//25.08 org.freedesktop.Sdk.Extension.rust-stable//25.08
+flatpak-builder --user --install --force-clean build io.github.kai_j_g.CosmicHardwareMonitor.json
+```
+
+`cargo-sources.json` is generated from `Cargo.lock` so the build can run without
+network access, the way Flathub's builders do. Regenerate it whenever
+`Cargo.lock` changes:
+
+```bash
+python flatpak-cargo-generator.py Cargo.lock -o cargo-sources.json
+```
+
+(from [flatpak-builder-tools](https://github.com/flatpak/flatpak-builder-tools))
+
+**Two readings are unavailable in the Flatpak build**, because the sandbox
+cannot see them and the permissions needed to fix it are broader than a panel
+applet should ask for:
+
+- **Process count** — the sandbox has its own PID namespace, so `/proc` lists
+  only the processes inside it. The CPU tab omits the figure.
+- **Partition usage** — the sandbox's `/proc/mounts` describes the sandbox. The
+  Storage tab says so, and the overview drops its Disk dial.
+
+Everything else — all temperatures, CPU utilisation, clocks, power draw, memory,
+disk throughput and GPU metrics — works normally. NVIDIA is the exception:
+`nvidia-smi` is not present in the runtime, so the Flatpak build cannot read
+NVIDIA cards. Build from source for those.
 
 </details>
 
@@ -228,11 +264,11 @@ cargo clean
 ```
 
 Your saved settings live in
-`~/.config/cosmic/io.github.kaijg.CosmicHardwareMonitor/` and are left alone.
+`~/.config/cosmic/io.github.kai_j_g.CosmicHardwareMonitor/` and are left alone.
 Delete that directory if you want them gone too:
 
 ```bash
-rm -r ~/.config/cosmic/io.github.kaijg.CosmicHardwareMonitor
+rm -r ~/.config/cosmic/io.github.kai_j_g.CosmicHardwareMonitor
 ```
 
 ---
@@ -284,7 +320,7 @@ pkill cosmic-panel
 If it's still missing, confirm the desktop entry landed in the right place:
 
 ```bash
-ls ~/.local/share/applications/io.github.kaijg.CosmicHardwareMonitor.desktop
+ls ~/.local/share/applications/io.github.kai_j_g.CosmicHardwareMonitor.desktop
 ```
 
 A missing file means `just install` didn't finish — re-run it and check for
@@ -385,7 +421,10 @@ src/
     fmt.rs           shared value formatting
     overview.rs cores.rs gpu.rs memory.rs storage.rs settings.rs
     sparkline.rs circular_gauge.rs vertical_bar.rs
-data/                desktop entry, AppStream metainfo, icons
+    sandbox.rs       detects a Flatpak sandbox, where two readings are hidden
+data/                desktop entry, AppStream metainfo, icons, screenshots
+io.github.kai_j_g.CosmicHardwareMonitor.json   Flatpak manifest
+cargo-sources.json   pinned crate sources, for offline Flatpak builds
 ```
 
 `cargo doc --open` renders all of this with the module documentation, which is

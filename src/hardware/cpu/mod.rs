@@ -11,6 +11,7 @@ use std::time::Instant;
 use usage::{Usage, UsageTracker};
 
 use super::sysfs::{self, Hwmon};
+use super::sandbox;
 use super::types::{CpuCoreInfo, CpuInfo};
 
 /// Fallback package temperature when no CPU sensor is exposed at all.
@@ -235,7 +236,14 @@ fn read_core_freq(core: usize) -> Option<u32> {
 }
 
 /// Counts running processes and threads.
-fn read_process_counts() -> (usize, usize) {
+///
+/// The process count is `None` inside a Flatpak sandbox, whose PID namespace
+/// hides every process but its own — see [`super::sandbox`].
+fn read_process_counts() -> (Option<usize>, usize) {
+    if sandbox::is_flatpak() {
+        return (None, read_thread_count());
+    }
+
     // Every process has a directory in /proc named after its PID; the other
     // entries there are files and named subsystems, so count numeric names.
     let processes = match fs::read_dir("/proc") {
@@ -246,7 +254,7 @@ fn read_process_counts() -> (usize, usize) {
         Err(_) => 0,
     };
 
-    (processes, read_thread_count())
+    (Some(processes), read_thread_count())
 }
 
 /// Total threads, from the `running/total` field of `/proc/loadavg`.

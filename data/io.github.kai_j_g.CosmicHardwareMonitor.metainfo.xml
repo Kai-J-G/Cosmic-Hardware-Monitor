@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.kai_j_g.CosmicHardwareMonitor</id>
+
+  <name>Cosmic Hardware Monitor</name>
+  <summary>Monitor CPU, GPU, memory and storage from the panel</summary>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+
+  <developer id="io.github.kai_j_g">
+    <name>Kai Gurney</name>
+  </developer>
+
+  <launchable type="desktop-id">io.github.kai_j_g.CosmicHardwareMonitor.desktop</launchable>
+
+  <description>
+    <p>
+      A native hardware and thermal monitor applet for the COSMIC desktop. It sits
+      in the panel showing a thermometer tinted by thermal state alongside the
+      current CPU temperature, and opens into a full monitor.
+    </p>
+    <p>Readings come straight from the kernel — no daemon, no helper service, and no lm_sensors dependency.</p>
+    <p>The popup covers:</p>
+    <ul>
+      <li>Overview: CPU, GPU, memory and disk dials, network throughput, load averages and uptime</li>
+      <li>CPU: package temperature, utilisation, average clock, power draw, and a per-core grid with live clocks</li>
+      <li>GPU: utilisation, clock, power draw, edge and junction temperatures, and VRAM usage</li>
+      <li>Memory: physical and swap usage, committed and cached, with a history chart</li>
+      <li>Storage: disk throughput and per-partition free space</li>
+    </ul>
+    <p>
+      AMD and Intel CPUs are read through hwmon. GPU support covers AMD through
+      sysfs, NVIDIA through nvidia-smi, and Intel integrated graphics.
+    </p>
+  </description>
+
+  <categories>
+    <category>Utility</category>
+    <category>System</category>
+    <category>Monitor</category>
+  </categories>
+
+  <keywords>
+    <keyword>temperature</keyword>
+    <keyword>sensors</keyword>
+    <keyword>hardware</keyword>
+    <keyword>monitor</keyword>
+    <keyword>CPU</keyword>
+    <keyword>GPU</keyword>
+    <keyword>applet</keyword>
+    <keyword>COSMIC</keyword>
+  </keywords>
+
+  <url type="homepage">https://github.com/Kai-J-G/Cosmic-Hardware-Monitor</url>
+  <url type="bugtracker">https://github.com/Kai-J-G/Cosmic-Hardware-Monitor/issues</url>
+  <url type="vcs-browser">https://github.com/Kai-J-G/Cosmic-Hardware-Monitor</url>
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>The overview, with dials for CPU, GPU, memory and disk</caption>
+      <image>https://raw.githubusercontent.com/Kai-J-G/Cosmic-Hardware-Monitor/main/data/screenshots/overview.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Per-core CPU temperatures, load and clocks</caption>
+      <image>https://raw.githubusercontent.com/Kai-J-G/Cosmic-Hardware-Monitor/main/data/screenshots/cpu.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>GPU utilisation, temperatures and VRAM</caption>
+      <image>https://raw.githubusercontent.com/Kai-J-G/Cosmic-Hardware-Monitor/main/data/screenshots/gpu.png</image>
+    </screenshot>
+  </screenshots>
+
+  <releases>
+    <release version="1.0.0" date="2026-09-08">
+      <description>
+        <p>First release.</p>
+      </description>
+    </release>
+  </releases>
+
+  <content_rating type="oars-1.1"/>
+
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </supports>
+</component>

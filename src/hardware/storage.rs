@@ -4,6 +4,7 @@ use std::collections::HashSet;
 use std::ffi::CString;
 use std::mem::MaybeUninit;
 
+use super::sandbox;
 use super::sysfs::{self, Hwmon, RateMeter};
 use super::types::{PartitionInfo, StorageInfo, StorageMetrics};
 
@@ -119,7 +120,14 @@ fn parse_field(fields: &[&str], index: usize) -> u64 {
 }
 
 /// Lists the mounted filesystems worth showing, root first.
+///
+/// Returns nothing inside a Flatpak sandbox, where `/proc/mounts` describes the
+/// sandbox rather than the machine — see [`super::sandbox`].
 fn read_partitions() -> Vec<PartitionInfo> {
+    if sandbox::is_flatpak() {
+        return Vec::new();
+    }
+
     let Some(contents) = sysfs::read("/proc/mounts") else {
         return Vec::new();
     };

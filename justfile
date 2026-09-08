@@ -1,5 +1,5 @@
 name := 'cosmic-ext-hardware-monitor'
-export APPID := 'io.github.kaijg.CosmicHardwareMonitor'
+export APPID := 'io.github.kai_j_g.CosmicHardwareMonitor'
 
 prefix := env_var_or_default("PREFIX", env_var('HOME') / '.local')
 bin_dir := prefix / 'bin'

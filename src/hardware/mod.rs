@@ -6,6 +6,7 @@
 
 pub mod cpu;
 pub mod gpu;
+pub mod sandbox;
 pub mod storage;
 pub mod sysfs;
 pub mod system;
