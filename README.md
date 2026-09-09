@@ -2,14 +2,14 @@
 
 <img src="data/icons/logo.png" alt="Cosmic Hardware Monitor" width="160">
 
-# COSMIC HARDWARE MONITOR
+# Hardware Monitor for COSMIC™
 
-**Your machine's temperature, at a glance in the COSMIC panel.**
+**Your machine's temperature, at a glance in the COSMIC™ panel.**
 
 [![license](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 [![release](https://img.shields.io/github/v/tag/Kai-J-G/CosmicHardwareMonitor?style=flat-square&label=release)](https://github.com/Kai-J-G/CosmicHardwareMonitor/tags)
 [![built with Rust](https://img.shields.io/badge/built%20with-Rust-000000?style=flat-square&logo=rust)](https://www.rust-lang.org)
-[![for COSMIC](https://img.shields.io/badge/for-COSMIC-6b21a8?style=flat-square)](https://system76.com/cosmic)
+[![for the COSMIC desktop](https://img.shields.io/badge/for%20the-COSMIC%E2%84%A2%20desktop-6b21a8?style=flat-square)](https://system76.com/cosmic)
 
 [🇬🇧](README.md) · [🇫🇷](README.fr.md)
 
@@ -510,3 +510,12 @@ Inspired by [TempTyle](https://github.com/neojakey/TempTyle) by neojakey.
 ## License
 
 [MIT](LICENSE)
+
+## Trademark
+
+COSMIC™ is a trademark of [System76, Inc.](https://system76.com) This is an
+unofficial, third-party applet **for the COSMIC™ desktop**. It is not affiliated
+with, endorsed by, or sponsored by System76, and it follows the
+[COSMIC trademark policy](https://github.com/pop-os/cosmic-epoch/blob/master/TRADEMARK.md):
+it uses the encouraged `cosmic-ext-` package namespace and its own App ID
+namespace, not the reserved `cosmic-` or `com.system76.` prefixes.

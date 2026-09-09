@@ -1,6 +1,6 @@
 [Desktop Entry]
-Name=Cosmic Hardware Monitor
-Comment=Hardware temperature, CPU, GPU, NVMe and system monitor for COSMIC Desktop
+Name=Hardware Monitor for COSMIC™
+Comment=Hardware temperature, CPU, GPU, NVMe and system monitor for the COSMIC™ desktop
 Type=Application
 Exec=cosmic-ext-hardware-monitor
 Terminal=false

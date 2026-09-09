@@ -3,7 +3,7 @@ name = "cosmic-ext-hardware-monitor"
 version = "1.0.0"
 edition = "2021"
 license = "MIT"
-description = "Native hardware and thermal monitor applet for the COSMIC desktop"
+description = "Native hardware and thermal monitor applet for the COSMIC™ desktop"
 repository = "https://github.com/Kai-J-G/CosmicHardwareMonitor"
 
 [dependencies]

@@ -2,8 +2,8 @@
 <component type="desktop-application">
   <id>io.github.kai_j_g.CosmicHardwareMonitor</id>
 
-  <name>Cosmic Hardware Monitor</name>
-  <summary>Monitor CPU, GPU, memory and storage from the panel</summary>
+  <name>Hardware Monitor for COSMIC™</name>
+  <summary>Monitor CPU, GPU, memory and storage from the COSMIC™ panel</summary>
 
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>MIT</project_license>
@@ -16,7 +16,7 @@
 
   <description>
     <p>
-      A native hardware and thermal monitor applet for the COSMIC desktop. It sits
+      A native hardware and thermal monitor applet for the COSMIC™ desktop. It sits
       in the panel showing a thermometer tinted by thermal state alongside the
       current CPU temperature, and opens into a full monitor.
     </p>
