@@ -9,6 +9,8 @@
   "command": "cosmic-ext-hardware-monitor",
   "finish-args": [
     "--socket=wayland",
+    "--share=ipc",
+    "--filesystem=xdg-config/cosmic:rw",
     "--talk-name=com.system76.CosmicSettingsDaemon",
     "--talk-name=com.system76.CosmicSettingsDaemon.*",
     "--filesystem=/sys/class/hwmon:ro",
@@ -39,8 +41,8 @@
         {
           "type": "git",
           "url": "https://github.com/Kai-J-G/CosmicHardwareMonitor.git",
-          "tag": "v1.0.0",
-          "commit": "777252c0887136ccccccd7799cd5c54e24e01ef9"
+          "tag": "v1.1.0",
+          "commit": "3a52b3f3f5bca455b754b49220d29b44b25e47b1"
         },
         "cargo-sources.json"
       ]
