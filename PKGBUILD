@@ -3,7 +3,7 @@
 
 pkgname=cosmic-ext-hardware-monitor
 _appid=io.github.kai_j_g.CosmicHardwareMonitor
-_repo=CosmicHardwareMonitor
+_repo=cosmic-ext-hardware-monitor
 pkgver=1.1.1
 pkgrel=1
 pkgdesc='Native hardware and thermal monitor applet for the COSMIC desktop'

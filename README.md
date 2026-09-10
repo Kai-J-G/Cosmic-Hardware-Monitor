@@ -7,7 +7,7 @@
 **Your machine's temperature, at a glance in the COSMIC™ panel.**
 
 [![license](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
-[![release](https://img.shields.io/github/v/tag/Kai-J-G/CosmicHardwareMonitor?style=flat-square&label=release)](https://github.com/Kai-J-G/CosmicHardwareMonitor/tags)
+[![release](https://img.shields.io/github/v/tag/Kai-J-G/cosmic-ext-hardware-monitor?style=flat-square&label=release)](https://github.com/Kai-J-G/cosmic-ext-hardware-monitor/tags)
 [![built with Rust](https://img.shields.io/badge/built%20with-Rust-000000?style=flat-square&logo=rust)](https://www.rust-lang.org)
 [![for the COSMIC desktop](https://img.shields.io/badge/for%20the-COSMIC%E2%84%A2%20desktop-6b21a8?style=flat-square)](https://system76.com/cosmic)
 
@@ -145,7 +145,7 @@ cargo install just
 ### 2. Clone
 
 ```bash
-git clone https://github.com/Kai-J-G/CosmicHardwareMonitor.git
+git clone https://github.com/Kai-J-G/cosmic-ext-hardware-monitor.git
 ```
 
 ```bash

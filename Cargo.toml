@@ -4,7 +4,7 @@ version = "1.0.0"
 edition = "2021"
 license = "MIT"
 description = "Native hardware and thermal monitor applet for the COSMIC™ desktop"
-repository = "https://github.com/Kai-J-G/CosmicHardwareMonitor"
+repository = "https://github.com/Kai-J-G/cosmic-ext-hardware-monitor"
 
 [dependencies]
 # Persisted settings are (de)serialised by cosmic-config.

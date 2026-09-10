@@ -40,7 +40,7 @@
       "sources": [
         {
           "type": "git",
-          "url": "https://github.com/Kai-J-G/CosmicHardwareMonitor.git",
+          "url": "https://github.com/Kai-J-G/cosmic-ext-hardware-monitor.git",
           "tag": "v1.1.1",
           "commit": "e9365dd873ae3598ca9568ae1aa388dc58924be4"
         },
