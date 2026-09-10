@@ -2,7 +2,7 @@
 # Contributor: prushton2
 
 pkgname=cosmic-ext-hardware-monitor
-_appid=io.github.kai_j_g.CosmicHardwareMonitor
+_appid=io.github.kai_j_g.HardwareMonitor
 _repo=cosmic-ext-hardware-monitor
 pkgver=1.1.3
 pkgrel=1

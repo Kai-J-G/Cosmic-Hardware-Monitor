@@ -263,7 +263,7 @@ Le français est inclus comme exemple.
 <summary><strong>Flatpak</strong></summary>
 
 ```bash
-flatpak-builder --user --install --force-clean build io.github.kai_j_g.CosmicHardwareMonitor.json
+flatpak-builder --user --install --force-clean build io.github.kai_j_g.HardwareMonitor.json
 ```
 
 Deux relevés ne peuvent pas fonctionner dans le bac à sable et sont masqués

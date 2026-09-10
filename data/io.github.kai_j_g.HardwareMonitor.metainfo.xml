@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>io.github.kai_j_g.CosmicHardwareMonitor</id>
+  <id>io.github.kai_j_g.HardwareMonitor</id>
 
   <name>Hardware Monitor for COSMIC™</name>
   <summary>Monitor CPU, GPU, memory and storage from the COSMIC™ panel</summary>
@@ -12,7 +12,7 @@
     <name>Kai Gurney</name>
   </developer>
 
-  <launchable type="desktop-id">io.github.kai_j_g.CosmicHardwareMonitor.desktop</launchable>
+  <launchable type="desktop-id">io.github.kai_j_g.HardwareMonitor.desktop</launchable>
 
   <description>
     <p>

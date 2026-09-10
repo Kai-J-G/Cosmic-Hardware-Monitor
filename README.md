@@ -259,7 +259,7 @@ French is included as an example.
 <summary><strong>Flatpak</strong></summary>
 
 ```bash
-flatpak-builder --user --install --force-clean build io.github.kai_j_g.CosmicHardwareMonitor.json
+flatpak-builder --user --install --force-clean build io.github.kai_j_g.HardwareMonitor.json
 ```
 
 Two readings can't work inside the sandbox and are hidden rather than shown

@@ -1,6 +1,6 @@
 # Screenshots
 
-These three files are referenced by `data/io.github.kai_j_g.CosmicHardwareMonitor.metainfo.xml`
+These three files are referenced by `data/io.github.kai_j_g.HardwareMonitor.metainfo.xml`
 and are **required for a Flathub submission** — the build validates that every
 screenshot URL resolves.
 
@@ -17,5 +17,5 @@ CPU or GPU so the thermal colour-coding is actually visible.
 Once added, re-run:
 
 ```bash
-appstreamcli validate data/io.github.kai_j_g.CosmicHardwareMonitor.metainfo.xml
+appstreamcli validate data/io.github.kai_j_g.HardwareMonitor.metainfo.xml
 ```
