@@ -432,6 +432,17 @@ Inspiré par [TempTyle](https://github.com/neojakey/TempTyle) de neojakey.
 
 [MIT](LICENSE)
 
+## Assistance par IA
+
+Une partie de ce projet a été écrite avec l'aide de
+[Claude](https://claude.ai) (Anthropic) : une refonte du code source, le système
+de localisation, la gestion du bac à sable Flatpak, les métadonnées
+d'empaquetage et l'essentiel de cette documentation. L'implémentation initiale
+de l'applet et ses orientations de conception sont les miennes, et les commits
+assistés par IA portent une ligne `Co-Authored-By`.
+
+---
+
 ## Marque déposée
 
 COSMIC™ est une marque de [System76, Inc.](https://system76.com) Cette applet

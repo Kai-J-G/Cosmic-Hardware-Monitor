@@ -511,6 +511,16 @@ Inspired by [TempTyle](https://github.com/neojakey/TempTyle) by neojakey.
 
 [MIT](LICENSE)
 
+## AI assistance
+
+Parts of this project were written with assistance from
+[Claude](https://claude.ai) (Anthropic): a refactor of the source, the
+localization system, the Flatpak sandbox handling, the packaging metadata, and
+most of this documentation. The applet's original implementation and its design
+direction are mine, and AI-assisted commits carry a `Co-Authored-By` trailer.
+
+---
+
 ## Trademark
 
 COSMIC™ is a trademark of [System76, Inc.](https://system76.com) This is an
