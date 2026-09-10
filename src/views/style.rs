@@ -12,6 +12,20 @@ use cosmic::Element;
 /// Corner radius shared by every card-sized surface.
 const CARD_RADIUS: f32 = 12.0;
 
+/// The desktop's accent colour.
+///
+/// Used for readings that carry no meaning of their own — the dials, the
+/// throughput cards, the network dot — so the applet picks up whatever accent
+/// the user has chosen in COSMIC™ Settings rather than imposing its own brand
+/// colour. Readings that *do* carry meaning, namely temperatures, keep the
+/// thermal palette in [`crate::hardware::types::ThermalStatus`]; recolouring
+/// those would throw away what the colour is telling you.
+pub fn accent() -> Color {
+    let accent = cosmic::theme::active().cosmic().accent_color();
+
+    Color::from_rgb(accent.red, accent.green, accent.blue)
+}
+
 /// Colour that reads as a faint lift off the background in either theme:
 /// white over dark, black over light.
 fn overlay(is_dark: bool, alpha: f32) -> Color {
@@ -73,4 +87,27 @@ pub fn swatch<'a, M: 'static>(color: Color, size: f32, radius: f32) -> Element<'
         .height(Length::Fixed(size))
         .class(surface(color, Color::TRANSPARENT, radius))
         .into()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Guards the wiring: the accent must come from the active theme, so that
+    /// pinning light or dark in settings, or the desktop changing its accent,
+    /// is reflected. A reintroduced constant would fail this.
+    #[test]
+    fn accent_tracks_the_active_theme() {
+        let theme = cosmic::theme::active();
+        let expected = theme.cosmic().accent_color();
+        let actual = accent();
+
+        assert!((actual.r - expected.red).abs() < f32::EPSILON);
+        assert!((actual.g - expected.green).abs() < f32::EPSILON);
+        assert!((actual.b - expected.blue).abs() < f32::EPSILON);
+
+        for channel in [actual.r, actual.g, actual.b] {
+            assert!((0.0..=1.0).contains(&channel), "channel out of range: {channel}");
+        }
+    }
 }

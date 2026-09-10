@@ -8,7 +8,7 @@ use crate::app::{ActiveTab, Message};
 use crate::fl;
 use crate::hardware::types::{HardwareSnapshot, TemperatureUnit, ThermalStatus};
 use crate::views::circular_gauge::CircularGauge;
-use crate::views::{fmt, label_and_value, style, EMERALD};
+use crate::views::{fmt, label_and_value, style};
 
 const DIAL_SIZE: f32 = 66.0;
 
@@ -44,7 +44,7 @@ fn dials<'a>(
     is_dark: bool,
 ) -> Element<'a, Message> {
     let dial = |percent: f32, label: String, sub: Option<String>, tab: ActiveTab| {
-        let gauge = CircularGauge::new(percent, fmt::percent(percent, 0), label, EMERALD)
+        let gauge = CircularGauge::new(percent, fmt::percent(percent, 0), label, style::accent())
             .with_sub_text(sub)
             .with_theme(is_dark);
 
@@ -165,7 +165,7 @@ fn net_rates<'a>(snapshot: &'a HardwareSnapshot, labels: NetLabels) -> Element<'
 
     row![
         text(up).size(size),
-        style::swatch(EMERALD, 8.0, 4.0),
+        style::swatch(style::accent(), 8.0, 4.0),
         text(down).size(size),
     ]
     .spacing(12)
@@ -241,7 +241,7 @@ fn gpu_section<'a>(snapshot: &'a HardwareSnapshot, is_dark: bool) -> Element<'a,
                 gpu.utilization_percent as f32,
                 fmt::percent(gpu.utilization_percent as f32, 0),
                 String::new(),
-                EMERALD,
+                style::accent(),
             )
             .with_theme(is_dark);
 

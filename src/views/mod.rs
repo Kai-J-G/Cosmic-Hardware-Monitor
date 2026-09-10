@@ -31,9 +31,6 @@ use cosmic::Element;
 use crate::app::{ActiveTab, AppModel, Message};
 use crate::fl;
 
-/// Neutral accent for readings that carry no thermal meaning.
-pub const EMERALD: Color = Color::from_rgb(0.0, 0.90, 0.46);
-
 /// Each tab is laid out for its own content, so the popup resizes with it.
 pub fn popup_width(active_tab: ActiveTab) -> f32 {
     match active_tab {

@@ -7,9 +7,7 @@ use cosmic::Element;
 use crate::app::Message;
 use crate::fl;
 use crate::hardware::types::{PartitionInfo, StorageMetrics};
-use crate::views::{fmt, nav_row, style, EMERALD};
-
-const CYAN: Color = Color::from_rgb(0.0, 0.75, 1.0);
+use crate::views::{fmt, nav_row, style};
 
 /// How many partitions the list will grow to fit before it starts scrolling.
 ///
@@ -25,8 +23,16 @@ pub fn view<'a>(metrics: &'a StorageMetrics, is_dark: bool) -> Element<'a, Messa
     let sp = cosmic::theme::spacing();
 
     let speeds = row![
-        speed_card(fl!("read-speed"), metrics.read_kbs, "go-up-symbolic", CYAN, is_dark),
-        speed_card(fl!("write-speed"), metrics.write_kbs, "go-down-symbolic", EMERALD, is_dark),
+        // Both tinted with the desktop accent; the arrows and labels are what
+        // tell them apart.
+        speed_card(fl!("read-speed"), metrics.read_kbs, "go-up-symbolic", style::accent(), is_dark),
+        speed_card(
+            fl!("write-speed"),
+            metrics.write_kbs,
+            "go-down-symbolic",
+            style::accent(),
+            is_dark,
+        ),
     ]
     .spacing(sp.space_s)
     .width(Length::Fill);

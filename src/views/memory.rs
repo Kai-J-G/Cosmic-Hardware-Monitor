@@ -7,7 +7,7 @@ use cosmic::Element;
 use crate::app::Message;
 use crate::fl;
 use crate::hardware::types::MemoryMetrics;
-use crate::views::{fmt, graph_card, nav_row, label_and_value, stat_card, style, EMERALD};
+use crate::views::{fmt, graph_card, label_and_value, nav_row, stat_card, style};
 
 pub fn view<'a>(
     memory: &'a MemoryMetrics,
@@ -19,7 +19,7 @@ pub fn view<'a>(
     column![
         nav_row(fl!("memory-title")),
         headline(memory, is_dark),
-        graph_card(fl!("memory-history"), history, EMERALD, is_dark),
+        graph_card(fl!("memory-history"), history, style::accent(), is_dark),
         usage_bar(memory),
         details(memory, is_dark),
     ]
