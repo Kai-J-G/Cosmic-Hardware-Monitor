@@ -41,8 +41,8 @@
         {
           "type": "git",
           "url": "https://github.com/Kai-J-G/cosmic-ext-hardware-monitor.git",
-          "tag": "v1.1.1",
-          "commit": "e9365dd873ae3598ca9568ae1aa388dc58924be4"
+          "tag": "v1.1.2",
+          "commit": "b131d66b7c2b94c0df1ed1db2103e4024b857268"
         },
         "cargo-sources.json"
       ]

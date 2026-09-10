@@ -4,7 +4,7 @@
 pkgname=cosmic-ext-hardware-monitor
 _appid=io.github.kai_j_g.CosmicHardwareMonitor
 _repo=cosmic-ext-hardware-monitor
-pkgver=1.1.1
+pkgver=1.1.2
 pkgrel=1
 pkgdesc='Native hardware and thermal monitor applet for the COSMIC desktop'
 arch=('x86_64' 'aarch64')
@@ -17,7 +17,7 @@ optdepends=(
     'nvidia-utils: NVIDIA telemetry via nvidia-smi'
 )
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('3692e2cb416e6b09058fd4329a3c524824314b53886777fbd75a4a961bde8067')
+sha256sums=('3466c0a9b724c88fe691ca5dbe40a9e95cd6eae582ada3a6330a1718e61de4b5')
 
 prepare() {
     cd "$_repo-$pkgver"
