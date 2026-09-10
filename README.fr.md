@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="data/icons/logo.png" alt="Moniteur matériel COSMIC" width="160">
+<img src="data/icons/logo.png" alt="Hardware Monitor for COSMIC" width="160">
 
 # Hardware Monitor for COSMIC™
 
-**La température de votre machine, d'un coup d'œil dans le panneau COSMIC™.**
+**La température de votre machine, d'un coup d'œil dans le panneau.**
 
 [![licence](https://img.shields.io/badge/licence-MIT-blue?style=flat-square)](LICENSE)
 [![version](https://img.shields.io/github/v/tag/Kai-J-G/cosmic-ext-hardware-monitor?style=flat-square&label=version)](https://github.com/Kai-J-G/cosmic-ext-hardware-monitor/tags)
@@ -17,107 +17,26 @@
 
 </div>
 
-Se place dans votre panneau avec un thermomètre teinté selon l'état thermique,
-et s'ouvre sur un moniteur complet pour le processeur, le GPU, la mémoire et le
-stockage.
-
-Écrit en Rust avec [libcosmic](https://github.com/pop-os/libcosmic). Lit
-directement le noyau — aucun démon, aucun service auxiliaire, aucune dépendance
-à `lm_sensors`.
-
----
-
-## Sommaire
-
-- [Ce qu'il affiche](#ce-quil-affiche)
-- [Prérequis](#prérequis)
-- [Installation](#installation)
-- [Ajout au panneau](#ajout-au-panneau)
-- [Mise à jour](#mise-à-jour)
-- [Désinstallation](#désinstallation)
-- [Compilation manuelle](#compilation-manuelle)
-- [Dépannage](#dépannage)
-- [Traduire](#traduire)
-- [Structure du projet](#structure-du-projet)
-- [Licence](#licence)
-
----
-
-## Ce qu'il affiche
-
-**Dans le panneau** — un thermomètre teinté selon l'état thermique (cyan →
-émeraude → or → ambre → rouge) à côté de la température actuelle du processeur.
-
-**Dans la fenêtre** — quatre cadrans pour le processeur, le GPU, la mémoire et
-le disque, chacun menant à son propre onglet, au-dessus d'un panneau dépliable
-avec le débit réseau, la répartition utilisateur/système/inactif, les charges
-moyennes, la VRAM, les températures des disques et le temps de fonctionnement.
-
-| Onglet | Relevés |
-| --- | --- |
-| **Processeur** | Température du package, utilisation, fréquence moyenne, consommation, nombre de processus/fils/descripteurs, courbe de température, et une grille par cœur avec les fréquences en direct |
-| **GPU** | Utilisation, fréquence, consommation, températures bord et jonction, utilisation de la VRAM |
-| **Mémoire** | Utilisée et disponible, répartition physique et fichier d'échange, engagée et en cache, avec un historique |
-| **Stockage** | Débits de lecture et d'écriture, et chaque partition montée avec son espace libre |
-| **Paramètres** | Suivre le thème du bureau ou le fixer clair/sombre, °C ou °F, intervalle d'actualisation de 1 s à 5 s |
-
-**Matériel pris en charge**
-
-| | Source |
-| --- | --- |
-| Processeur AMD | `k10temp` / `zenpower` — températures Tctl/Tdie et par CCD |
-| Processeur Intel | `coretemp` — températures package et par cœur |
-| GPU AMD | `sysfs` et le périphérique DRM |
-| GPU NVIDIA | `nvidia-smi` |
-| GPU Intel | hwmon `i915` / `xe` |
-| Stockage | hwmon `nvme` / `drivetemp`, `/proc/diskstats`, `statvfs` |
-
----
-
-## Prérequis
-
-**Pour l'exécuter**
-
-- Une session **COSMIC** (c'est une applet de panneau, elle n'a pas de fenêtre autonome).
-- Linux, avec les systèmes de fichiers `/sys` et `/proc` habituels.
-- `libxkbcommon` — déjà présent dans toute session COSMIC.
-
-**Pour la compiler**
-
-| Paquet | Pourquoi |
-| --- | --- |
-| Une chaîne **Rust** stable récente | Testé avec la 1.98 ; édition 2021 |
-| **git** | `libcosmic` est récupéré comme dépendance git |
-| **just** | Exécute les recettes d'installation |
-| En-têtes **libxkbcommon** | Liés par la couche fenêtrage |
-| **pkgconf** / `pkg-config` | Utilisé par les scripts de compilation des dépendances |
-
-Sur Arch et CachyOS, `makepkg -si` lit ces dépendances depuis le `PKGBUILD` et
-les installe pour vous ; l'étape 1 ne concerne donc que la voie `just install`.
-
-**Facultatif, améliore l'affichage**
-
-- `pciutils` — fournit un nom de GPU lisible quand le pilote n'en expose pas.
-- `nvidia-smi` (fourni avec le pilote NVIDIA) — requis pour la télémétrie NVIDIA.
-
 ---
 
 ## Installation
 
-### 1. Installer les prérequis
+Il vous faut une session **COSMIC™**. Le reste est couvert ci-dessous.
 
 <details open>
-<summary><strong>Arch / CachyOS</strong></summary>
+<summary><strong>Arch · CachyOS · EndeavourOS</strong></summary>
 
 ```bash
-sudo pacman -S --needed rustup just git libxkbcommon pkgconf pciutils
+sudo pacman -S --needed rustup just git base-devel
 ```
-
-Si vous n'avez jamais utilisé `rustup`, choisissez une chaîne d'outils :
 
 ```bash
-rustup default stable
+git clone https://github.com/Kai-J-G/cosmic-ext-hardware-monitor.git
+cd cosmic-ext-hardware-monitor
+makepkg -si
 ```
+
+Cela construit un vrai paquet, que `pacman` suit ensuite normalement.
 
 </details>
 
@@ -128,238 +47,145 @@ rustup default stable
 sudo dnf install cargo just git libxkbcommon-devel pkgconf-pkg-config pciutils
 ```
 
-</details>
-
-<details>
-<summary><strong>Debian / Ubuntu</strong></summary>
-
-```bash
-sudo apt install cargo git libxkbcommon-dev pkg-config pciutils
-```
-
-`just` n'est pas empaqueté sur les versions plus anciennes. Si `apt install just` échoue :
-
-```bash
-cargo install just
-```
-
-</details>
-
-### 2. Cloner
-
 ```bash
 git clone https://github.com/Kai-J-G/cosmic-ext-hardware-monitor.git
-```
-
-```bash
-cd CosmicHardwareMonitor
-```
-
-### 3. Installer
-
-**Sur Arch ou CachyOS**, compilez le paquet — pacman le suit alors, et
-`pacman -R` le retire proprement :
-
-```bash
-makepkg -si
-```
-
-**Sur tout autre système**, installez dans votre dossier personnel. Aucun `sudo`
-n'est nécessaire :
-
-```bash
+cd cosmic-ext-hardware-monitor
 just install
 ```
 
-> **La première compilation est longue.** Cargo récupère `libcosmic` et tout son
-> arbre de dépendances depuis git puis compile l'ensemble — comptez plusieurs
-> minutes, et un dossier `target/` de plusieurs Go (environ 9 Go une fois les
-> compilations debug et release présentes). Les suivantes prennent quelques
-> secondes, et `cargo clean` récupère tout cet espace.
-
-### Ce qui est installé
-
-`makepkg -si` installe à l'échelle du système sous `/usr`, comme tout paquet
-pacman. `just install` place tout sous `~/.local`, sans toucher aux dossiers
-système :
-
-| Fichier | Chemin |
-| --- | --- |
-| Exécutable | `~/.local/bin/cosmic-ext-hardware-monitor` |
-| Entrée de bureau | `~/.local/share/applications/io.github.kai_j_g.CosmicHardwareMonitor.desktop` |
-| Métadonnées AppStream | `~/.local/share/metainfo/io.github.kai_j_g.CosmicHardwareMonitor.metainfo.xml` |
-| Icônes | `~/.local/share/icons/hicolor/scalable/apps/io.github.kai_j_g.CosmicHardwareMonitor{,-symbolic}.svg` |
-
----
-
-## Ajout au panneau
-
-1. Ouvrez **Paramètres COSMIC → Bureau → Panneau → Applets**.
-2. Cliquez sur **Ajouter une applet**.
-3. Sélectionnez **Cosmic Hardware Monitor** et placez-la où vous voulez.
-4. Cliquez sur l'icône du panneau pour ouvrir la fenêtre.
-
-Si elle n'apparaît pas dans la liste, voyez [Dépannage](#dépannage).
-
----
-
-## Mise à jour
-
-```bash
-git pull && just install
-```
-
-Sur Arch ou CachyOS, `git pull && makepkg -si` à la place. Notez que le
-`PKGBUILD` compile la dernière **version étiquetée**, pas l'état de `main` : un
-`git pull` ne change donc rien tant qu'aucune nouvelle version n'est étiquetée.
-
-L'applet lit ses réglages via `cosmic-config` : votre thème, votre unité et
-votre intervalle survivent aux réinstallations.
-
-Le panneau continue d'exécuter l'ancien binaire jusqu'à son redémarrage.
-Déconnectez-vous puis reconnectez-vous, ou redémarrez seulement le panneau —
-`cosmic-session` le surveille et le relance aussitôt :
-
-```bash
-pkill cosmic-panel
-```
-
----
-
-## Désinstallation
-
-Retirez d'abord l'applet de votre panneau, dans **Paramètres COSMIC → Bureau →
-Panneau → Applets**. Puis, si vous avez installé le paquet :
-
-```bash
-sudo pacman -R cosmic-ext-hardware-monitor
-```
-
-ou, si vous avez utilisé `just install` :
-
-```bash
-just uninstall
-```
-
-Vos réglages restent dans
-`~/.config/cosmic/io.github.kai_j_g.CosmicHardwareMonitor/`. Supprimez ce
-dossier si vous voulez aussi les effacer :
-
-```bash
-rm -r ~/.config/cosmic/io.github.kai_j_g.CosmicHardwareMonitor
-```
-
----
-
-## Compilation manuelle
-
-| Commande | Effet |
-| --- | --- |
-| `just` | Identique à `just build-release` |
-| `just build-release` | Compilation optimisée → `target/release/cosmic-ext-hardware-monitor` |
-| `just build-debug` | Compilation rapide, non optimisée |
-| `just run` | Lance l'applet directement avec `RUST_BACKTRACE=1` |
-| `just check` | `cargo check` puis `cargo test` |
-| `just install` | Compile, puis installe dans `PREFIX` (`~/.local` par défaut) |
-| `just uninstall` | Retire tous les fichiers installés |
-
-Cargo fonctionne aussi directement :
-
-```bash
-cargo build --release
-```
-
-```bash
-cargo test
-```
-
-Le profil release active le LTO léger, une seule unité de génération et le
-retrait des symboles : `just build-release` est donc nettement plus lent qu'une
-compilation debug, mais produit un binaire bien plus petit.
-
----
-
-## Dépannage
+</details>
 
 <details>
-<summary><strong>L'applet n'apparaît pas dans la liste</strong></summary>
-
-COSMIC recherche les applets au démarrage du panneau : une applet fraîchement
-installée n'est donc pas vue avant. Se déconnecter et se reconnecter règle le
-problème dans presque tous les cas. Pour éviter la déconnexion, redémarrez
-seulement le panneau — `cosmic-session` le relance aussitôt :
+<summary><strong>Debian · Ubuntu</strong></summary>
 
 ```bash
-pkill cosmic-panel
+sudo apt install cargo just git libxkbcommon-dev pkg-config pciutils
 ```
 
-Si elle manque toujours, vérifiez que l'entrée de bureau est au bon endroit :
+Si `just` n'est pas disponible, utilisez `cargo install just`.
 
 ```bash
-ls ~/.local/share/applications/io.github.kai_j_g.CosmicHardwareMonitor.desktop
+git clone https://github.com/Kai-J-G/cosmic-ext-hardware-monitor.git
+cd cosmic-ext-hardware-monitor
+just install
 ```
-
-Un fichier absent signifie que `just install` n'est pas allé au bout.
 
 </details>
+
+> **La première compilation prend quelques minutes.** Elle télécharge et compile
+> la boîte à outils COSMIC. Les suivantes prennent quelques secondes.
+> `just install` place tout dans votre dossier personnel et ne demande jamais
+> `sudo`.
+
+### Ajout au panneau
+
+1. Ouvrez **Paramètres → Bureau → Panneau → Applets**
+2. Cliquez sur **Ajouter une applet**
+3. Choisissez **Hardware Monitor for COSMIC™**
+
+Rien n'apparaît ? Déconnectez-vous puis reconnectez-vous : le panneau ne
+cherche les nouvelles applets qu'à son démarrage.
+
+---
+
+## Ce que vous obtenez
+
+Un thermomètre dans votre panneau qui change de couleur quand ça chauffe, et,
+à un clic, le tableau complet.
+
+<div align="center">
+<img src="data/screenshots/cpu.png" alt="Températures, charge et fréquences par cœur" width="430">
+</div>
+
+- **Processeur** — température, charge, fréquence, consommation, et chaque cœur
+  avec sa barre et sa fréquence en direct
+- **GPU** — charge, fréquence, consommation, températures bord et point chaud, VRAM
+- **Mémoire** — utilisée, disponible, fichier d'échange, avec un historique
+- **Stockage** — vitesses de lecture et d'écriture, espace libre par partition
+- **En un coup d'œil** — débit réseau, charges moyennes, températures des
+  disques, temps de fonctionnement
+
+Les couleurs suivent l'accent de votre bureau. Les températures gardent leur
+propre échelle : un processeur chaud a toujours l'air chaud.
+
+### Paramètres
+
+Cliquez sur l'engrenage dans la fenêtre. Vous pouvez suivre le thème du bureau
+ou le fixer clair ou sombre, basculer entre °C et °F, et choisir la fréquence
+d'actualisation (1 à 5 secondes).
+
+---
+
+## Mise à jour et suppression
+
+**Mettre à jour** — récupérez et réinstallez de la même façon :
+
+```bash
+git pull && makepkg -si    # Arch
+git pull && just install   # ailleurs
+```
+
+Vos réglages sont conservés. Redémarrez ensuite le panneau avec
+`pkill cosmic-panel`, il revient aussitôt.
+
+**Supprimer** — retirez d'abord l'applet du panneau, dans **Paramètres → Bureau
+→ Panneau → Applets**, puis :
+
+```bash
+sudo pacman -R cosmic-ext-hardware-monitor   # Arch
+just uninstall                               # ailleurs
+```
+
+---
+
+## Un problème ?
 
 <details>
 <summary><strong>La température du processeur affiche exactement 40 °C</strong></summary>
 
-C'est la valeur de repli utilisée quand aucun capteur thermique n'est trouvé —
-l'applet lit `k10temp`, `zenpower` et `coretemp` sous `/sys/class/hwmon`.
-Vérifiez ce que votre noyau expose :
+C'est la valeur affichée quand aucun capteur n'est trouvé. Voyez ce que votre
+système expose :
 
 ```bash
 for d in /sys/class/hwmon/hwmon*; do echo "$(basename $d): $(cat $d/name)"; done
 ```
 
-Si aucun de ces pilotes n'est listé, chargez celui de votre processeur
-(`k10temp` pour AMD, `coretemp` pour Intel) avec `sudo modprobe`.
+Si vous ne voyez ni `k10temp` (AMD) ni `coretemp` (Intel), chargez le module
+avec `sudo modprobe k10temp` ou `sudo modprobe coretemp`.
 
 </details>
 
 <details>
 <summary><strong>La consommation affiche « Estimation… »</strong></summary>
 
-La consommation du package provient du compteur d'énergie RAPL du noyau.
-Certaines distributions le réservent à root par mesure de sécurité, auquel cas
-l'applet ne peut pas le lire :
+Certaines distributions réservent le compteur d'énergie du noyau à root :
+l'applet ne peut alors pas le lire. Tout le reste fonctionne. Pour vérifier :
 
 ```bash
 ls -l /sys/class/powercap/intel-rapl/intel-rapl:0/energy_uj
 ```
 
-Si les droits sont `-r--------`, le compteur est réservé à root sur votre
-système et ce champ restera indisponible. Cela n'affecte aucun autre relevé.
+Des droits `-r--------` signifient qu'il est réservé à root.
 
 </details>
 
 <details>
-<summary><strong>L'onglet GPU indique qu'aucun GPU n'est détecté</strong></summary>
+<summary><strong>Aucun GPU détecté</strong></summary>
 
-- **AMD** — nécessite le pilote `amdgpu` chargé et une entrée `amdgpu` dans `/sys/class/hwmon`.
-- **NVIDIA** — nécessite `nvidia-smi` dans le `PATH` ; il est fourni avec le pilote propriétaire. Nouveau n'expose aucune télémétrie.
-- **Intel** — nécessite le hwmon `i915` ou `xe` ; les graphiques intégrés ne remontent qu'une température.
+- **AMD** — nécessite le pilote `amdgpu` chargé
+- **NVIDIA** — nécessite `nvidia-smi`, fourni avec le pilote propriétaire.
+  Nouveau ne remonte rien.
+- **Intel** — les graphiques intégrés ne remontent qu'une température
 
-Le fabricant est détecté une seule fois au démarrage : redémarrez l'applet après
-avoir installé un pilote.
-
-</details>
-
-<details>
-<summary><strong>Mon GPU porte un nom peu parlant</strong></summary>
-
-Le nom vient du périphérique DRM, avec `lspci` en repli. Installez `pciutils`
-si `lspci` est absent.
+Le GPU est détecté une fois au démarrage : redémarrez l'applet après avoir
+installé un pilote.
 
 </details>
 
 <details>
 <summary><strong>Pas de température pour un disque SATA</strong></summary>
 
-Les disques NVMe sont gérés d'office par le pilote `nvme`. Les disques SATA
-nécessitent le module `drivetemp` :
+Les disques NVMe fonctionnent d'office. Les disques SATA nécessitent un module :
 
 ```bash
 sudo modprobe drivetemp
@@ -369,68 +195,89 @@ Ajoutez `drivetemp` à `/etc/modules-load.d/` pour qu'il persiste au redémarrag
 
 </details>
 
+<details>
+<summary><strong>Mon GPU porte un nom étrange</strong></summary>
+
+Le nom vient du pilote, avec `lspci` en repli. Installez `pciutils` s'il manque.
+Certaines cartes partagent un identifiant entre plusieurs modèles : le nom peut
+donc tous les énumérer.
+
+</details>
+
 ---
 
-## Traduire
+## Pour les développeurs
 
-Toutes les chaînes visibles sont dans
-`i18n/en/cosmic_ext_hardware_monitor.ftl`. Pour ajouter une langue, copiez ce
-fichier dans `i18n/<code>/` et traduisez les valeurs :
+<details>
+<summary><strong>Compiler et modifier</strong></summary>
+
+| Commande | Effet |
+| --- | --- |
+| `just build-release` | Compilation optimisée |
+| `just build-debug` | Compilation rapide, non optimisée |
+| `just run` | Lance l'applet directement |
+| `just check` | `cargo check` et `cargo test` |
+| `just install` / `just uninstall` | Installe dans `~/.local`, ou retire |
+
+Les relevés viennent directement de `/sys` et `/proc` — aucun démon, aucun
+service auxiliaire, aucune dépendance à `lm_sensors`. `/sys/class/hwmon` est
+parcouru une seule fois par actualisation et partagé entre les collecteurs
+processeur, GPU et stockage ; ce qui ne change pas (modèle du processeur,
+fabricant du GPU) est résolu une fois au démarrage.
+
+```
+src/
+  main.rs       point d'entrée, et un aperçu de l'articulation
+  app.rs        état, messages, boucle de mise à jour
+  config.rs     réglages persistants
+  i18n.rs       localisation, et la macro fl!()
+  hardware/     lit la machine
+  views/        dessine la fenêtre
+i18n/           traductions, un fichier Fluent par langue
+data/           entrée de bureau, métadonnées, icônes, captures
+```
+
+`cargo doc --open` est le chemin d'entrée le plus rapide.
+
+</details>
+
+<details>
+<summary><strong>Traduire</strong></summary>
+
+Toutes les chaînes sont dans `i18n/en/cosmic_ext_hardware_monitor.ftl`. Pour
+ajouter une langue, copiez ce dossier et traduisez les valeurs :
 
 ```bash
 mkdir -p i18n/de && cp i18n/en/*.ftl i18n/de/
 ```
 
-Laissez les identifiants à gauche des `=` tels quels, et conservez les
-`{ $variables }` — elles sont remplies à l'exécution. Rien d'autre ne change :
-les fichiers sont intégrés au binaire à la compilation, et l'applet choisit la
-langue selon les réglages de votre bureau, avec l'anglais en repli pour ce qui
-n'est pas traduit.
+Gardez les identifiants à gauche des `=` et les `{ $variables }` tels quels.
+L'applet choisit la langue selon les réglages de votre bureau. `cargo test`
+vérifie qu'aucune traduction n'oublie une entrée.
 
-`cargo test` vérifie que chaque langue définit le même ensemble d'identifiants :
-une traduction incomplète fait échouer la compilation plutôt que d'afficher de
-l'anglais au milieu d'une phrase.
+Le français est inclus comme exemple.
 
----
+</details>
 
-## Structure du projet
+<details>
+<summary><strong>Flatpak</strong></summary>
 
-```
-src/
-  main.rs            point d'entrée, et un aperçu de l'articulation
-  app.rs             état de l'applet, messages et boucle de mise à jour
-  config.rs          réglages persistants (cosmic-config)
-  i18n.rs            localisation, et la macro fl!() utilisée par les vues
-  hardware/          lit la machine
-    sysfs.rs         aides sysfs/procfs, énumération hwmon, mesure de débit
-    cpu/mod.rs       modèle, températures, fréquences, consommation
-    cpu/usage.rs     utilisation, à partir des compteurs /proc/stat
-    gpu.rs           télémétrie AMD / NVIDIA / Intel
-    storage.rs       températures des disques, débits, partitions
-    system.rs        temps de fonctionnement, charge, réseau, mémoire
-    types.rs         les données que les vues affichent
-    sandbox.rs       détecte un bac à sable Flatpak, où deux relevés sont masqués
-  views/             affiche la fenêtre
-    mod.rs           structure de la fenêtre et widgets communs
-    panel.rs         bouton du panneau et surface de la fenêtre
-    style.rs         styles de conteneurs partagés
-    fmt.rs           mise en forme des valeurs
-i18n/                traductions, un fichier Fluent par langue
-data/                entrée de bureau, métadonnées AppStream, icônes, captures
+```bash
+flatpak-builder --user --install --force-clean build io.github.kai_j_g.CosmicHardwareMonitor.json
 ```
 
-`cargo doc --open` affiche tout cela avec la documentation des modules, c'est le
-chemin d'entrée le plus rapide.
+Deux relevés ne peuvent pas fonctionner dans le bac à sable et sont masqués
+plutôt qu'affichés faux : le nombre de processus et l'utilisation par partition.
+NVIDIA n'est pas pris en charge dans la version Flatpak, `nvidia-smi` n'étant
+pas dans l'environnement d'exécution.
+
+</details>
 
 ---
 
 ## Crédits
 
 Inspiré par [TempTyle](https://github.com/neojakey/TempTyle) de neojakey.
-
-## Licence
-
-[MIT](LICENSE)
 
 ## Assistance par IA
 
@@ -441,13 +288,15 @@ d'empaquetage et l'essentiel de cette documentation. L'implémentation initiale
 de l'applet et ses orientations de conception sont les miennes, et les commits
 assistés par IA portent une ligne `Co-Authored-By`.
 
----
-
 ## Marque déposée
 
 COSMIC™ est une marque de [System76, Inc.](https://system76.com) Cette applet
-tierce et non officielle est destinée **au bureau COSMIC™**. Elle n'est ni
-affiliée à System76, ni approuvée ou parrainée par System76, et respecte la
+tierce et non officielle est destinée **au bureau COSMIC™** ; elle n'est ni
+affiliée à System76 ni approuvée par lui. Elle respecte la
 [politique de marque COSMIC](https://github.com/pop-os/cosmic-epoch/blob/master/TRADEMARK.md) :
-elle utilise l'espace de noms `cosmic-ext-` recommandé et son propre espace
-d'App ID, et non les préfixes réservés `cosmic-` ou `com.system76.`.
+espace de noms `cosmic-ext-` recommandé, et son propre espace d'App ID plutôt
+que les préfixes réservés `cosmic-` ou `com.system76.`.
+
+## Licence
+
+[MIT](LICENSE)
